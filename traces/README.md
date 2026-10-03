@@ -43,9 +43,9 @@ New sessions are appended to the index below with category `TODO` and the first 
 
 | # | File | Session ID | Date | Category | Description |
 |---|------|------------|------|----------|-------------|
-| 01 | `trace-01-project-overview-docs-firestore-session-traces.jsonl` | `dfa9571b-24f9-4249-8b32-c6d043c8df66` | 2026-10-03 | Documentation | Project overview, Firestore Native-mode docs fix, README Google Cloud section, `JWT_SECRET` removal, session-traces exporter |
+| 01 | `trace-01-project-overview-docs-firestore-session-traces.jsonl` | `dfa9571b-24f9-4249-8b32-c6d043c8df66` | 2026-10-03 | Documentation | Project overview, Firestore Native-mode docs fix, README Google Cloud section, `JWT_SECRET` removal, session-traces exporter, commit identity cleanup |
 <!-- trace-index:end -->
 
 ## Human Judgment Points
 
-*   **Trace 01:** The human asked for plan mode before any edit and approved the plan; chose to open pull requests on the fork (`reichaves/jor-mcp`) only, and asked to close an upstream pull request opened by mistake; asked to remove the unused `JWT_SECRET` from `service.yaml` and record it in persistent memory; chose Claude Code session traces over enriching the OpenTelemetry spans.
+*   **Trace 01:** The human asked for plan mode before any edit and approved the plan; chose to open pull requests on the fork (`reichaves/jor-mcp`) only, and asked to close an upstream pull request opened by mistake; asked to remove the unused `JWT_SECRET` from `service.yaml` and record it in persistent memory; chose Claude Code session traces over enriching the OpenTelemetry spans; after a partial email address was caught in review, asked to set a GitHub `noreply` commit identity (repository and global), rewrite the authors of the open pull requests and force-push them on the fork; then asked to squash-merge pull requests #1 and #2 on the fork and check that this trace was current.
