@@ -60,6 +60,8 @@ A documentação abrangente para todos os públicos está disponível no diretó
 -   [Histórico e Especificações](docs/pt-br/3-historico-e-specs/)
 -   [Marco Legal](docs/pt-br/4-legal/)
 
+As transcrições sanitizadas das sessões do Claude Code, que documentam como as mudanças feitas com ajuda de IA foram produzidas, ficam em [`traces/`](traces/README.md).
+
 ## Primeiros Passos
 
 ### Pré-requisitos
@@ -149,7 +151,7 @@ Para instruções sobre como conectar o Claude Desktop ou outros agentes de IA, 
 
 Recebemos contribuições de outras organizações jornalísticas e da comunidade de código aberto!
 
-Por favor, leia nossas [Diretrizes de Contribuição](docs/CONTRIBUTING_DOCS_PTBR.md) para aprender sobre nossos padrões de desenvolvimento, configuração de ambiente e requisitos de qualidade de código antes de enviar um Pull Request.
+Por favor, leia nossas [Diretrizes de Contribuição](CONTRIBUTING_pt-br.md) para aprender sobre nossos padrões de desenvolvimento, configuração de ambiente e requisitos de qualidade de código antes de enviar um Pull Request.
 
 Agentes de IA que auxiliam neste repositório devem seguir as regras em [AGENTS.md](AGENTS.md).
 
