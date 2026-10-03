@@ -60,6 +60,8 @@ Comprehensive documentation for all audiences is available in the [`docs/`](docs
 -   [History and Specifications](docs/en/3-history-and-specs/)
 -   [Legal Framework](docs/en/4-legal/)
 
+Sanitized Claude Code session transcripts that document how AI-assisted changes were made are kept in [`traces/`](traces/README.md).
+
 ## Getting Started
 
 ### Prerequisites
@@ -150,7 +152,7 @@ For instructions on connecting Claude Desktop or other AI agents, and a referenc
 
 We welcome contributions from other journalism organizations and the open-source community! 
 
-Please read our [Contributing Guidelines](docs/CONTRIBUTING_DOCS_EN.md) to learn about our development standards, environment setup, and code quality requirements before submitting a Pull Request.
+Please read our [Contributing Guidelines](CONTRIBUTING.md) to learn about our development standards, environment setup, and code quality requirements before submitting a Pull Request.
 
 AI Agents assisting with this repository must adhere to the rules in [AGENTS.md](AGENTS.md).
 
