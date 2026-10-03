@@ -12,9 +12,9 @@ Claude Code stores each session as a JSONL file under `~/.claude/projects/<repos
 
 Unlike a raw copy, every exported trace is filtered and redacted:
 
-*   **Kept:** conversation records only (`type` = `user`, `assistant` or `system`). Tool calls and tool results are part of these records.
-*   **Dropped:** harness metadata, such as environment snapshots and skill listings (`attachment`), file-history snapshots, UI state and session titles.
-*   **Redacted:** the home directory becomes `~`; any other occurrence of the local username (e.g. in `ls -l` output or dashed project paths) becomes `<user>`; email addresses become `<redacted-email>` (except `noreply@anthropic.com` in commit trailers); GitHub, Google and OpenAI-style API tokens become `<redacted-token>`.
+-   **Kept:** conversation records only (`type` = `user`, `assistant` or `system`). Tool calls and tool results are part of these records.
+-   **Dropped:** harness metadata, such as environment snapshots and skill listings (`attachment`), file-history snapshots, UI state and session titles.
+-   **Redacted:** the home directory becomes `~`; any other occurrence of the local username (e.g. in `ls -l` output or dashed project paths) becomes `<user>`; email addresses become `<redacted-email>` (except `noreply@anthropic.com` in commit trailers); GitHub, Google and OpenAI-style API tokens become `<redacted-token>`.
 
 Review a trace before committing it: the script removes known patterns, not every possible secret.
 
@@ -22,10 +22,10 @@ Review a trace before committing it: the script removes known patterns, not ever
 
 Each file is JSON Lines. Every line is one record with, among others:
 
-*   `type`: `user`, `assistant` or `system`
-*   `message`: the message content, including `tool_use` and `tool_result` blocks
-*   `timestamp`: ISO 8601 timestamp
-*   `sessionId`: UUID of the Claude Code session
+-   `type`: `user`, `assistant` or `system`
+-   `message`: the message content, including `tool_use` and `tool_result` blocks
+-   `timestamp`: ISO 8601 timestamp
+-   `sessionId`: UUID of the Claude Code session
 
 ## Exporting
 
@@ -48,4 +48,4 @@ New sessions are appended to the index below with category `TODO` and the first 
 
 ## Human Judgment Points
 
-*   **Trace 01:** The human asked for plan mode before any edit and approved the plan; chose to open pull requests on the fork (`reichaves/jor-mcp`) only, and asked to close an upstream pull request opened by mistake; asked to remove the unused `JWT_SECRET` from `service.yaml` and record it in persistent memory; chose Claude Code session traces over enriching the OpenTelemetry spans; after a partial email address was caught in review, asked to set a GitHub `noreply` commit identity (repository and global), rewrite the authors of the open pull requests and force-push them on the fork; then asked to squash-merge pull requests #1 and #2 on the fork and check that this trace was current.
+-   **Trace 01:** The human asked for plan mode before any edit and approved the plan; chose to open pull requests on the fork (`reichaves/jor-mcp`) only, and asked to close an upstream pull request opened by mistake; asked to remove the unused `JWT_SECRET` from `service.yaml` and record it in persistent memory; chose Claude Code session traces over enriching the OpenTelemetry spans; after a partial email address was caught in review, asked to set a GitHub `noreply` commit identity (repository and global), rewrite the authors of the open pull requests and force-push them on the fork; then asked to squash-merge pull requests #1 and #2 on the fork and check that this trace was current.

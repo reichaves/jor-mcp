@@ -12,12 +12,12 @@ This document outlines the deployment architecture for the Jor-MCP server on Goo
 
 The system is designed to be fully serverless, highly available, and stateless at the application layer.
 
-*   **Entrypoint:** Global External Application Load Balancer (Handles custom domains, SSL, and SSE streaming). [See detailed configuration guide](load-balancer-config.md).
-*   **Frontend Hosting:** Google Cloud Storage (GCS) Bucket configured as a Backend Bucket on the Load Balancer, with Cloud CDN enabled.
-*   **Compute:** Google Cloud Run (Containerized, auto-scaling). Locked down to "Internal and Cloud Load Balancing traffic only." The service is set to **allow unauthenticated invocations** (IAM binding `roles/run.invoker` for `allUsers`), because the load balancer forwards plain HTTP to it; identity and authorization are enforced exclusively at the application layer (Firebase JWT + allow-list).
-*   **Database/State:** Google Cloud Firestore (Handles distributed rate-limiting, OAuth DCR clients, and codes).
-*   **Identity:** Google Cloud Identity Platform / Firebase Auth (Validates JWTs).
-*   **Observability:** Google Cloud Operations Suite (Cloud Logging and Cloud Trace via OpenTelemetry).
+-   **Entrypoint:** Global External Application Load Balancer (Handles custom domains, SSL, and SSE streaming). [See detailed configuration guide](load-balancer-config.md).
+-   **Frontend Hosting:** Google Cloud Storage (GCS) Bucket configured as a Backend Bucket on the Load Balancer, with Cloud CDN enabled.
+-   **Compute:** Google Cloud Run (Containerized, auto-scaling). Locked down to "Internal and Cloud Load Balancing traffic only." The service is set to **allow unauthenticated invocations** (IAM binding `roles/run.invoker` for `allUsers`), because the load balancer forwards plain HTTP to it; identity and authorization are enforced exclusively at the application layer (Firebase JWT + allow-list).
+-   **Database/State:** Google Cloud Firestore (Handles distributed rate-limiting, OAuth DCR clients, and codes).
+-   **Identity:** Google Cloud Identity Platform / Firebase Auth (Validates JWTs).
+-   **Observability:** Google Cloud Operations Suite (Cloud Logging and Cloud Trace via OpenTelemetry).
 
 ---
 
@@ -78,10 +78,10 @@ To authorize a new journalist or partner to use the MCP server, an administrator
 
 ### 5.1 Allow-list Document Format
 Add a document under the `allowed_users` collection with the following specifications:
-*   **Document ID:** Must be the user's Google email address in **lowercase** (e.g., `user@domain.com`). This ensures lookups are case-insensitive.
-*   **Document Fields:**
-    *   `status` (String): Must be set to `"active"` to permit access. If set to `"disabled"` or any other value, authorization will be rejected.
-    *   `tier` (String, Optional): Can be `"basic"` or `"pro"`. Dictates the monthly request/token limit applied to this user. Defaults to `"basic"` if omitted.
+-   **Document ID:** Must be the user's Google email address in **lowercase** (e.g., `user@domain.com`). This ensures lookups are case-insensitive.
+-   **Document Fields:**
+    -   `status` (String): Must be set to `"active"` to permit access. If set to `"disabled"` or any other value, authorization will be rejected.
+    -   `tier` (String, Optional): Can be `"basic"` or `"pro"`. Dictates the monthly request/token limit applied to this user. Defaults to `"basic"` if omitted.
 
 ---
 
@@ -119,8 +119,8 @@ To enable the deployment workflows in your repository, navigate to **Settings > 
 
 ### 8.2 Available Workflows
 Our repository contains pre-configured workflows that you can adapt:
-*   **`ci.yml`**: Compiles, runs tests, performs security scans, and builds/pushes the container to your own Google Artifact Registry.
-*   **`cd.yml`**: Triggers a manual deployment flow via GitHub's `workflow_dispatch` (allowing you to select exactly which image tag to deploy to Cloud Run without auto-deploying every merge).
+-   **`ci.yml`**: Compiles, runs tests, performs security scans, and builds/pushes the container to your own Google Artifact Registry.
+-   **`cd.yml`**: Triggers a manual deployment flow via GitHub's `workflow_dispatch` (allowing you to select exactly which image tag to deploy to Cloud Run without auto-deploying every merge).
 
 For detailed documentation on the internal testing gates, versioning mechanisms, and detailed pipeline jobs, please refer to the **[Contributing Guide](../../../CONTRIBUTING.md#continuous-integration-ci)**.
 
