@@ -31,6 +31,9 @@ The project underwent a significant architectural evolution following mentorship
 ### Phase 3: Launch Readiness & Sustainability (Late Spring 2026)
 In this stage, the project transitioned from pure R&D to launch readiness. We finalized the branding and visual identity—designed to represent data flow and processing—and built the `jor-mcp-site` portal to bridge the gap between technical infrastructure and user consent. We also established B2B onboarding workflows, enabling newsrooms to negotiate paid plans directly, followed by manual admin-led tier provisioning (Basic/Pro) in Firestore.
 
+## Development Traces
+Sessions in which Claude Code was used to work on this repository are kept, sanitized, in [`traces/`](../../../traces/). Each trace records the tool calls, their outputs and the points where a human made the decision. The index and the sanitization rules are in [`traces/README.md`](../../../traces/README.md).
+
 ## Contents
 - [Project Timeline](project-timeline.md)
 - [Specs](specs/)

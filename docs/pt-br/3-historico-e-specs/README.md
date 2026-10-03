@@ -31,6 +31,9 @@ O projeto passou por uma evolução arquitetural significativa após a mentoria 
 ### Fase 3: Prontidão para Lançamento e Sustentabilidade (Final da Primavera 2026)
 Nesta etapa, o projeto transitou da P&D pura para a prontidão de lançamento. Finalizamos a marca e a identidade visual—projetadas para representar o fluxo e processamento de dados—e construímos o portal `jor-mcp-site` para preencher a lacuna entre a infraestrutura técnica e o consentimento do usuário. Também estabelecemos fluxos de trabalho de integração B2B, permitindo que as redações negociem planos pagos diretamente, seguidos pelo provisionamento manual de níveis (Básico vs. Pro) no Firestore pelos administradores.
 
+## Traces de Desenvolvimento
+As sessões em que o Claude Code foi usado para trabalhar neste repositório ficam guardadas, já sanitizadas, em [`traces/`](../../../traces/). Cada trace registra as chamadas de ferramentas, seus resultados e os momentos em que uma pessoa tomou a decisão. O índice e as regras de sanitização estão em [`traces/README.md`](../../../traces/README.md).
+
 ## Conteúdo
 - [Cronograma do Projeto](cronograma-do-projeto.md)
 - [Specs](specs/)
