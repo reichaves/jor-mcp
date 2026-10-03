@@ -21,7 +21,7 @@ spec:
         autoscaling.knative.dev/maxScale: "5"
 
         # ── Secret Manager — lookup names → resource IDs ──────────────────────
-        run.googleapis.com/secrets: "mcp-github-token:projects/${GCP_PROJECT_NUMBER}/secrets/MCP_GITHUB_TOKEN,jwt-secret:projects/${GCP_PROJECT_NUMBER}/secrets/JWT_SECRET"
+        run.googleapis.com/secrets: "mcp-github-token:projects/${GCP_PROJECT_NUMBER}/secrets/MCP_GITHUB_TOKEN"
     spec:
       # ← Service account configured with the actual GCP value
       serviceAccountName: 959918358302-compute@developer.gserviceaccount.com
@@ -58,11 +58,6 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: mcp-github-token
-                  key: latest
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: jwt-secret
                   key: latest
 
   traffic:
