@@ -12,12 +12,12 @@ Este documento descreve a arquitetura de implantação do servidor Jor-MCP no Go
 
 O sistema foi projetado para ser totalmente serverless, altamente disponível e stateless na camada de aplicação.
 
-*   **Ponto de Entrada (Entrypoint):** Load Balancer de Aplicação Externo Global (Gerencia domínios personalizados, SSL e streaming SSE). [Consulte o guia de configuração detalhado](configuracao-load-balancer.md).
-*   **Hospedagem Frontend:** Google Cloud Storage (GCS) Bucket configurado como Backend Bucket no Load Balancer, com Cloud CDN ativado.
-*   **Camada de Computação:** Google Cloud Run (Containerizado, auto-scaling). Bloqueado para "Tráfego interno e de Load Balancer apenas." O serviço é configurado para **permitir invocações não autenticadas** (binding IAM `roles/run.invoker` para `allUsers`), pois o load balancer encaminha HTTP puro; identidade e autorização são validadas exclusivamente na camada de aplicação (JWT do Firebase + allow-list).
-*   **Banco de Dados/Estado:** Google Cloud Firestore (Gerencia limites de taxa distribuídos, clientes OAuth DCR e códigos autorizativos).
-*   **Identidade:** Google Cloud Identity Platform / Firebase Auth (Valida tokens JWT).
-*   **Observabilidade:** Google Cloud Operations Suite (Cloud Logging e Cloud Trace via OpenTelemetry).
+-   **Ponto de Entrada (Entrypoint):** Load Balancer de Aplicação Externo Global (Gerencia domínios personalizados, SSL e streaming SSE). [Consulte o guia de configuração detalhado](configuracao-load-balancer.md).
+-   **Hospedagem Frontend:** Google Cloud Storage (GCS) Bucket configurado como Backend Bucket no Load Balancer, com Cloud CDN ativado.
+-   **Camada de Computação:** Google Cloud Run (Containerizado, auto-scaling). Bloqueado para "Tráfego interno e de Load Balancer apenas." O serviço é configurado para **permitir invocações não autenticadas** (binding IAM `roles/run.invoker` para `allUsers`), pois o load balancer encaminha HTTP puro; identidade e autorização são validadas exclusivamente na camada de aplicação (JWT do Firebase + allow-list).
+-   **Banco de Dados/Estado:** Google Cloud Firestore (Gerencia limites de taxa distribuídos, clientes OAuth DCR e códigos autorizativos).
+-   **Identidade:** Google Cloud Identity Platform / Firebase Auth (Valida tokens JWT).
+-   **Observabilidade:** Google Cloud Operations Suite (Cloud Logging e Cloud Trace via OpenTelemetry).
 
 ---
 
@@ -28,7 +28,7 @@ Para executar o `jor-mcp` de forma segura, você deve criar uma Conta de Serviç
 ### Funções IAM Necessárias
 Atribua as seguintes permissões granulares para a conta de serviço do Cloud Run:
 
-1.  **Usuário do Cloud Datastore (`roles/datastore.user`):** Necessário para permitir que a aplicação leia e grave os registros de limites de taxa, clientes OAuth e códigos temporários no Firestore. Apesar do nome, esta é a função IAM padrão também para o Firestore em modo nativo; ela não indica que o banco deva usar o modo Datastore (veja [Configuração e Variáveis de Ambiente](configuracao-e-env.md)).
+1.  **Usuário do Cloud Datastore (`roles/datastore.user`):** Necessário para permitir que a aplicação leia e grave os registros de limites de taxa, clientes OAuth e códigos temporários no Firestore. Apesar do nome, esta é a função IAM padrão também para o Firestore em Native mode; ela não indica que o banco deva usar Datastore mode (veja [Configuração e Variáveis de Ambiente](configuracao-e-env.md)).
 2.  **Acessor de Segredos do Secret Manager (`roles/secretmanager.secretAccessor`):** Necessário para injetar variáveis de ambiente confidenciais (como `FIREBASE_WEB_API_KEY` e `MCP_GITHUB_TOKEN`) diretamente no container durante a inicialização.
 3.  **Agente do Cloud Trace (`roles/cloudtrace.agent`):** Necessário para permitir que a auto-instrumentação do OpenTelemetry envie rastreamentos de latência para o GCP Cloud Trace.
 4.  **Gravador de Logs (`roles/logging.logWriter`):** Necessário para enviar os registros de log da aplicação diretamente para o GCP Cloud Logging.
@@ -78,10 +78,10 @@ Para autorizar um novo jornalista ou parceiro a utilizar o servidor MCP, um admi
 
 ### 5.1 Formato do Documento da Whitelist
 Adicione um documento na coleção `allowed_users` respeitando os seguintes campos:
-*   **ID do Documento:** Deve ser obrigatoriamente o e-mail Google do usuário formatado em **letras minúsculas** (ex: `usuario@dominio.com`). Isso garante que as buscas sejam case-insensitive.
-*   **Campos do Documento:**
-    *   `status` (String): Deve ser definido como `"active"` para permitir o acesso. Caso seja definido como `"disabled"` ou qualquer outro valor, o acesso será rejeitado.
-    *   `tier` (String, Opcional): Pode assumir `"basic"` ou `"pro"`. Determina a cota de limite de taxa mensal do usuário. Se omitido, assume `"basic"`.
+-   **ID do Documento:** Deve ser obrigatoriamente o e-mail Google do usuário formatado em **letras minúsculas** (ex: `usuario@dominio.com`). Isso garante que as buscas sejam case-insensitive.
+-   **Campos do Documento:**
+    -   `status` (String): Deve ser definido como `"active"` para permitir o acesso. Caso seja definido como `"disabled"` ou qualquer outro valor, o acesso será rejeitado.
+    -   `tier` (String, Opcional): Pode assumir `"basic"` ou `"pro"`. Determina a cota de limite de taxa mensal do usuário. Se omitido, assume `"basic"`.
 
 ---
 
@@ -119,8 +119,8 @@ Para habilitar os workflows de implantação no seu repositório, navegue até *
 
 ### 8.2 Workflows Disponíveis
 Nosso repositório contém workflows pré-configurados que você pode adaptar:
-*   **`ci.yml`**: Compila, executa testes, realiza varreduras de segurança e constrói/envia o container para o seu próprio Google Artifact Registry.
-*   **`cd.yml`**: Dispara um fluxo de implantação manual via `workflow_dispatch` do GitHub (permitindo que você selecione exatamente qual tag de imagem deseja implantar no Cloud Run, sem fazer deploy automático de cada merge).
+-   **`ci.yml`**: Compila, executa testes, realiza varreduras de segurança e constrói/envia o container para o seu próprio Google Artifact Registry.
+-   **`cd.yml`**: Dispara um fluxo de implantação manual via `workflow_dispatch` do GitHub (permitindo que você selecione exatamente qual tag de imagem deseja implantar no Cloud Run, sem fazer deploy automático de cada merge).
 
 Para obter a documentação detalhada sobre os critérios de teste internos, mecanismos de versionamento e detalhes de cada job da pipeline, consulte o **[Guia de Contribuição](../../../CONTRIBUTING_pt-br.md#integracao-continua-ci)**.
 

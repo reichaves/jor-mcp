@@ -5,4 +5,4 @@
 
 # Prerequisites
 
-*(Placeholder: Requirements for hosting, Docker, Environment Variables, generating JWT secrets).*
+*(Placeholder: Requirements for hosting, Docker, Environment Variables, generating secrets and Firebase configuration).*

@@ -17,22 +17,22 @@
 ### ⚠️ Project Status: Beta
 
 The current release state of `jor-mcp` is **Beta**.
-*   **Characteristics:**
-    *   Limited and selective invitations.
-    *   Requires registration and prior user approval.
-    *   Often involves an NDA (Non-Disclosure Agreement) in commercial projects.
-*   **Objective:**
-    *   Validate user experience (UX) with real people.
-    *   Test server load with a controlled number of concurrent users.
-    *   Detect issues specific to regional context or configurations.
-*   **Advantages over Alpha:** Greater diversity of test profiles without risk to the public brand.
+-   **Characteristics:**
+    -   Limited and selective invitations.
+    -   Requires registration and prior user approval.
+    -   Often involves an NDA (Non-Disclosure Agreement) in commercial projects.
+-   **Objective:**
+    -   Validate user experience (UX) with real people.
+    -   Test server load with a controlled number of concurrent users.
+    -   Detect issues specific to regional context or configurations.
+-   **Advantages over Alpha:** Greater diversity of test profiles without risk to the public brand.
 
 ### 🚀 Join our Replication Pilot!
 
 We are gearing up to test the **replicability** of `jor-mcp` by deploying and adapting it in the infrastructure of a **partner journalism organization**. 
-*   **The Pilot Round:** We will select **one pilot partner** first to receive hands-on setup support.
-*   **The Goal:** This round will be used to refine our setup guides, resulting in a comprehensive **Replication Playbook** along with standard **Infrastructure as Code (IaC)** and **Configuration as Code (CaC)** templates to make future self-service deployments extremely seamless.
-*   **Want to participate?** If your newsroom wants to pilot secure AI search over WordPress and GitHub, please **reach out to us** to express interest!
+-   **The Pilot Round:** We will select **one pilot partner** first to receive hands-on setup support.
+-   **The Goal:** This round will be used to refine our setup guides, resulting in a comprehensive **Replication Playbook** along with standard **Infrastructure as Code (IaC)** and **Configuration as Code (CaC)** templates to make future self-service deployments extremely seamless.
+-   **Want to participate?** If your newsroom wants to pilot secure AI search over WordPress and GitHub, please **reach out to us** to express interest!
 
 ---
 
@@ -46,26 +46,26 @@ By deploying your own instance of `jor-mcp`, your newsroom can empower AI workfl
 
 ## Features
 
-*   **WordPress Integration:** Search published articles, retrieve full content, and analyze metadata directly from your newsroom's CMS.
-*   **GitHub Integration:** Query internal repositories, research data, and codebases associated with your journalistic investigations.
-*   **Secure Access:** Native MCP OAuth 2.1 login backed by Firebase Auth (Google SSO) and an email allow-list ensures only authorized users can access your data.
-*   **Containerized:** Easy to deploy anywhere using Docker.
-*   **Easily Forkable:** Designed to be easily cloned, configured via environment variables, and deployed on standard cloud infrastructure.
+-   **WordPress Integration:** Search published articles, retrieve full content, and analyze metadata directly from your newsroom's CMS.
+-   **GitHub Integration:** Query internal repositories, research data, and codebases associated with your journalistic investigations.
+-   **Secure Access:** Native MCP OAuth 2.1 login backed by Firebase Auth (Google SSO) and an email allow-list ensures only authorized users can access your data.
+-   **Containerized:** Easy to deploy anywhere using Docker.
+-   **Easily Forkable:** Designed to be easily cloned, configured via environment variables, and deployed on standard cloud infrastructure.
 
 ## Documentation
 
 Comprehensive documentation for all audiences is available in the [`docs/`](docs/) directory:
-*   [Technical Architecture](docs/en/1-technical/)
-*   [Replication Guides](docs/en/2-replication/)
-*   [History and Specifications](docs/en/3-history-and-specs/)
-*   [Legal Framework](docs/en/4-legal/)
+-   [Technical Architecture](docs/en/1-technical/)
+-   [Replication Guides](docs/en/2-replication/)
+-   [History and Specifications](docs/en/3-history-and-specs/)
+-   [Legal Framework](docs/en/4-legal/)
 
 ## Getting Started
 
 ### Prerequisites
 
 To run your own instance of `jor-mcp`, you need a Google Cloud project (see [Google Cloud Requirements](#google-cloud-requirements)) and a container runtime:
-*   [Docker](https://www.docker.com/) (or open-source alternatives like [Colima](https://github.com/abiosoft/colima) or [Podman](https://podman.io/)).
+-   [Docker](https://www.docker.com/) (or open-source alternatives like [Colima](https://github.com/abiosoft/colima) or [Podman](https://podman.io/)).
 
 ### Installation via Docker (Recommended)
 
@@ -106,10 +106,10 @@ The easiest way to get `jor-mcp` running is via Docker.
 
 `jor-mcp` is not self-contained: it depends on Google Cloud **even when running locally**. Before starting the server you need:
 
-*   **A Google Cloud project** with **Firebase Auth** (Google SSO) and **Firestore** enabled.
-*   **Firestore created in Native mode.** The server uses the native Firestore client; a database in Datastore mode will not work, and the mode cannot be changed after data is written.
-*   **Credentials** available as Application Default Credentials: the service account on Cloud Run, or `gcloud auth application-default login` on your machine.
-*   **Your users in the allow-list:** a document in the `allowed_users` Firestore collection whose ID is the user's email (lowercase) with `status: "active"`.
+-   **A Google Cloud project** with **Firebase Auth** (Google SSO) and **Firestore** enabled.
+-   **Firestore created in Native mode.** The server uses the native Firestore client; a database in Datastore mode will not work, and the mode cannot be changed after data is written.
+-   **Credentials** available as Application Default Credentials: the service account on Cloud Run, or `gcloud auth application-default login` on your machine.
+-   **Your users in the allow-list:** a document in the `allowed_users` Firestore collection whose ID is the user's email (lowercase) with `status: "active"`.
 
 What each service is used for:
 
@@ -158,12 +158,12 @@ AI Agents assisting with this repository must adhere to the rules in [AGENTS.md]
 
 The development of `jor-mcp` was made possible through the generous support of two major journalism initiatives:
 
-*   **[JournalismAI Innovation Challenge](https://www.journalismai.info/programmes/innovation):** Supported via "JournalismAI" (a project of POLIS Journalism at LSE) and the "Google News Initiative," targeting the global journalism ecosystem.
-*   **[Codesinfo](https://codesinfo.com.br/en/home-english/):** Supported via "Projor" and the "Google News Initiative," targeting the Brazilian journalism ecosystem.
+-   **[JournalismAI Innovation Challenge](https://www.journalismai.info/programmes/innovation):** Supported via "JournalismAI" (a project of POLIS Journalism at LSE) and the "Google News Initiative," targeting the global journalism ecosystem.
+-   **[Codesinfo](https://codesinfo.com.br/en/home-english/):** Supported via "Projor" and the "Google News Initiative," targeting the Brazilian journalism ecosystem.
 
 ## Roadmap
 
-*   [🚀 Roadmap](docs/en/3-history-and-specs/roadmap.md)
+-   [🚀 Roadmap](docs/en/3-history-and-specs/roadmap.md)
 
 ## License
 

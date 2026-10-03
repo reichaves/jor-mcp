@@ -17,22 +17,22 @@
 ### ⚠️ Estado do Projeto: Beta
 
 O estado atual de lançamento do `jor-mcp` é **Beta**.
-*   **Características:**
-    *   Convites limitados e seletivos.
-    *   Requer cadastro e aprovação prévia dos usuários.
-    *   Muitas vezes com NDA (Acordo de Não Divulgação) em projetos comerciais.
-*   **Objetivo:**
-    *   Validar a experiência do usuário (UX) com pessoas reais.
-    *   Testar a carga do servidor com um número controlado de usuários simultâneos.
-    *   Detectar problemas específicos de contexto regional/configuração.
-*   **Vantagens sobre Alpha:** Maior diversidade de perfis de teste sem risco à marca pública.
+-   **Características:**
+    -   Convites limitados e seletivos.
+    -   Requer cadastro e aprovação prévia dos usuários.
+    -   Muitas vezes com NDA (Acordo de Não Divulgação) em projetos comerciais.
+-   **Objetivo:**
+    -   Validar a experiência do usuário (UX) com pessoas reais.
+    -   Testar a carga do servidor com um número controlado de usuários simultâneos.
+    -   Detectar problemas específicos de contexto regional/configuração.
+-   **Vantagens sobre Alpha:** Maior diversidade de perfis de teste sem risco à marca pública.
 
 ### 🚀 Participe do nosso Piloto de Replicação!
 
 Estamos nos preparando para testar a **replabilidade** do `jor-mcp`, instalando e adaptando-o na infraestrutura de outra **organização de jornalismo parceira**.
-*   **A Rodada Piloto:** Selecionaremos **um parceiro piloto** inicial para receber suporte prático e personalizado de implantação.
-*   **O Objetivo:** Esta primeira rodada servirá para refinar nossos manuais, gerando um **Playbook de Replicação** definitivo, além de templates de **Infraestrutura como Código (IaC)** e **Configuração como Código (CaC)** para facilitar a replicação autônoma para futuras organizações.
-*   **Quer participar?** Se a sua redação tem interesse em pilotar buscas seguras de IA sobre WordPress e GitHub, **entre em contato conosco** para manifestar interesse!
+-   **A Rodada Piloto:** Selecionaremos **um parceiro piloto** inicial para receber suporte prático e personalizado de implantação.
+-   **O Objetivo:** Esta primeira rodada servirá para refinar nossos manuais, gerando um **Playbook de Replicação** definitivo, além de templates de **Infraestrutura como Código (IaC)** e **Configuração como Código (CaC)** para facilitar a replicação autônoma para futuras organizações.
+-   **Quer participar?** Se a sua redação tem interesse em pilotar buscas seguras de IA sobre WordPress e GitHub, **entre em contato conosco** para manifestar interesse!
 
 ---
 
@@ -46,26 +46,26 @@ Ao implantar sua própria instância do `jor-mcp`, sua redação pode capacitar 
 
 ## Funcionalidades
 
-*   **Integração com WordPress:** Pesquise artigos publicados, recupere conteúdo completo e analise metadados diretamente do CMS da sua redação.
-*   **Integração com GitHub:** Consulte repositórios internos, pesquise dados e bases de código associadas às suas investigações jornalísticas.
-*   **Acesso Seguro:** Login OAuth 2.1 nativo do MCP, apoiado no Firebase Auth (Google SSO) e numa lista de e-mails autorizados, garante que só usuários autorizados acessem seus dados.
-*   **Containerizado:** Fácil de implantar em qualquer lugar usando Docker.
-*   **Facilmente Forkável:** Projetado para ser facilmente clonado, configurado via variáveis de ambiente e implantado em infraestrutura de nuvem padrão.
+-   **Integração com WordPress:** Pesquise artigos publicados, recupere conteúdo completo e analise metadados diretamente do CMS da sua redação.
+-   **Integração com GitHub:** Consulte repositórios internos, pesquise dados e bases de código associadas às suas investigações jornalísticas.
+-   **Acesso Seguro:** Login OAuth 2.1 nativo do MCP, apoiado no Firebase Auth (Google SSO) e numa allow-list de e-mails, garante que só usuários autorizados acessem seus dados.
+-   **Containerizado:** Fácil de implantar em qualquer lugar usando Docker.
+-   **Facilmente Forkável:** Projetado para ser facilmente clonado, configurado via variáveis de ambiente e implantado em infraestrutura de nuvem padrão.
 
 ## Documentação
 
 A documentação abrangente para todos os públicos está disponível no diretório [`docs/`](docs/):
-*   [Arquitetura Técnica](docs/pt-br/1-tecnico/)
-*   [Guias de Replicação](docs/pt-br/2-replicacao/)
-*   [Histórico e Especificações](docs/pt-br/3-historico-e-specs/)
-*   [Marco Legal](docs/pt-br/4-legal/)
+-   [Arquitetura Técnica](docs/pt-br/1-tecnico/)
+-   [Guias de Replicação](docs/pt-br/2-replicacao/)
+-   [Histórico e Especificações](docs/pt-br/3-historico-e-specs/)
+-   [Marco Legal](docs/pt-br/4-legal/)
 
 ## Primeiros Passos
 
 ### Pré-requisitos
 
 Para executar sua própria instância do `jor-mcp`, você precisa de um projeto Google Cloud (veja [Requisitos do Google Cloud](#requisitos-do-google-cloud)) e de um runtime de container:
-*   [Docker](https://www.docker.com/) (ou alternativas de código aberto como [Colima](https://github.com/abiosoft/colima) ou [Podman](https://podman.io/)).
+-   [Docker](https://www.docker.com/) (ou alternativas de código aberto como [Colima](https://github.com/abiosoft/colima) ou [Podman](https://podman.io/)).
 
 ### Instalação via Docker (Recomendado)
 
@@ -105,19 +105,19 @@ A maneira mais fácil de executar o `jor-mcp` é via Docker.
 
 O `jor-mcp` não roda sozinho: ele depende do Google Cloud **mesmo quando executado localmente**. Antes de iniciar o servidor, você precisa de:
 
-*   **Um projeto Google Cloud** com **Firebase Auth** (Google SSO) e **Firestore** ativados.
-*   **Firestore criado no modo nativo.** O servidor usa o cliente nativo do Firestore; um banco em modo Datastore não funciona, e o modo não pode ser alterado depois que há dados gravados.
-*   **Credenciais** disponíveis como Application Default Credentials: a conta de serviço no Cloud Run, ou `gcloud auth application-default login` na sua máquina.
-*   **Seus usuários na lista de autorizados:** um documento na coleção `allowed_users` do Firestore cujo ID é o e-mail do usuário (em minúsculas), com `status: "active"`.
+-   **Um projeto Google Cloud** com **Firebase Auth** (Google SSO) e **Firestore** ativados.
+-   **Firestore criado em Native mode.** O servidor usa o cliente nativo do Firestore; um banco em Datastore mode não funciona, e o modo não pode ser alterado depois que há dados gravados.
+-   **Credenciais** disponíveis como Application Default Credentials: a conta de serviço no Cloud Run, ou `gcloud auth application-default login` na sua máquina.
+-   **Seus usuários na allow-list:** um documento na coleção `allowed_users` do Firestore cujo ID é o e-mail do usuário (em minúsculas), com `status: "active"`.
 
 Para que serve cada serviço:
 
 | Serviço | Uso |
 |---|---|
 | Firebase Auth | Validar o token Bearer em toda requisição MCP e emitir tokens ao final do login OAuth 2.1 |
-| Firestore | Estado do OAuth (clientes registrados, códigos de autorização), lista de usuários autorizados e contadores de limite de uso por usuário e por IP |
+| Firestore | Estado do OAuth (clientes registrados, códigos de autorização), allow-list de usuários e contadores de Rate Limiting por usuário e por IP |
 
-As requisições ao WordPress e ao GitHub vão direto para essas APIs, sem passar pelo Google. Para uma explicação detalhada do fluxo de autenticação, das coleções e dos limites de uso, veja [Integração Firebase e Firestore](docs/pt-br/1-tecnico/integracoes/firebase-e-firestore.md).
+As requisições ao WordPress e ao GitHub vão direto para essas APIs, sem passar pelo Google. Para uma explicação detalhada do fluxo de autenticação, das coleções e do Rate Limiting, veja [Integração Firebase e Firestore](docs/pt-br/1-tecnico/integracoes/firebase-e-firestore.md).
 
 ## Configuração para sua Redação
 
@@ -157,12 +157,12 @@ Agentes de IA que auxiliam neste repositório devem seguir as regras em [AGENTS.
 
 O desenvolvimento do `jor-mcp` foi possível graças ao apoio generoso de duas grandes iniciativas globais de jornalismo:
 
-*   **[JournalismAI Innovation Challenge](https://www.journalismai.info/programmes/innovation):** Apoiado pela "JournalismAI" (um projeto da POLIS Journalism na LSE) e pela "Google News Initiative", visando o ecossistema jornalístico global.
-*   **[Codesinfo](https://codesinfo.com.br/en/home-english/):** Apoiado pelo "Projor" e pela "Google News Initiative", visando o ecossistema jornalístico brasileiro.
+-   **[JournalismAI Innovation Challenge](https://www.journalismai.info/programmes/innovation):** Apoiado pela "JournalismAI" (um projeto da POLIS Journalism na LSE) e pela "Google News Initiative", visando o ecossistema jornalístico global.
+-   **[Codesinfo](https://codesinfo.com.br/en/home-english/):** Apoiado pelo "Projor" e pela "Google News Initiative", visando o ecossistema jornalístico brasileiro.
 
 ## Roadmap
 
-*   [🚀 Roadmap](docs/pt-br/3-historico-e-specs/roadmap.md)
+-   [🚀 Roadmap](docs/pt-br/3-historico-e-specs/roadmap.md)
 
 ## Licença
 
