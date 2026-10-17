@@ -1,4 +1,4 @@
-.PHONY: check check-lint check-format check-types check-tests check-sast check-deps check-container run _audit-fail-hint
+.PHONY: check check-lint check-format check-types check-tests check-portal check-sast check-deps check-container run _audit-fail-hint
 
 # Run all code quality validations
 check:
@@ -33,6 +33,10 @@ check-types:
 # Testing: Unit tests and coverage
 check-tests:
 	uv run pytest --cov=src --cov-fail-under=90
+
+# Testing: Reference consent portal (needs Node.js 22+; not part of `check`)
+check-portal:
+	node --test "portal/tests/*.test.js"
 
 # Security: Static analysis for issues in source code
 check-sast:

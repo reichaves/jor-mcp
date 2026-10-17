@@ -30,7 +30,7 @@ Ask Ambiental Media to add your Google account to their allow-list, then follow 
 4.  **Runtime service account:** create `jor-mcp-runner` with the roles listed in the [deployment guide, section 2](deployment-guide.md#2-gcp-iam-service-account-permissions).
 5.  **GitHub token:** create a fine-grained token (checklist item 7) and store it in Secret Manager as `MCP_GITHUB_TOKEN`.
 6.  **Image and deploy:** build the image, push it to Artifact Registry and deploy with `service.yaml`, setting every variable marked as required for scenario B in [section 2](#2-required-variables-by-scenario).
-7.  **Consent portal:** publish a consent portal on GCS behind the same Load Balancer ([Load Balancer configuration](load-balancer-config.md)). See [section 4](#4-known-limitations): Ambiental Media's portal is private.
+7.  **Consent portal:** publish a consent portal on GCS behind the same Load Balancer ([Load Balancer configuration](load-balancer-config.md)). Ambiental Media's portal is private; use the [reference portal](#5-reference-consent-portal).
 8.  **Firebase and Firestore protections:** restrict the API key, deploy the Firestore rules and configure the TTL policies (checklist items 5, 6 and 9).
 9.  **Connect:** add `https://<your-domain>/mcp` as a connector in your MCP client ([section 3](#3-mcp-clients)).
 
@@ -51,7 +51,7 @@ Ask Ambiental Media to add your Google account to their allow-list, then follow 
     uv run --env-file .env uvicorn src.server:app --host 127.0.0.1 --port 8080
     ```
 
-5.  Serve a consent portal on `http://localhost:3000` (see [section 4](#4-known-limitations)).
+5.  Serve the [reference portal](#52-run-it-locally-scenario-c) on `http://localhost:3000`.
 6.  Connect with Claude Code:
 
     ```bash
@@ -98,13 +98,56 @@ Several defaults point to Ambiental Media. If you leave them unset, your instanc
 
 ## 4. Known Limitations
 
--   **Consent portal:** the production portal (`jor-mcp-site`) is a private repository. To complete the login flow on your own instance, you need a portal that implements the consent step described in [API Contracts](../1-technical/api-contracts.md). A minimal reference portal is planned.
+-   **Consent portal:** the production portal (`jor-mcp-site`) is a private repository. To complete the login flow on your own instance, you need a portal that implements the consent step described in [API Contracts](../1-technical/api-contracts.md). Use the [reference portal](#5-reference-consent-portal) or build your own.
 -   **GitHub file format:** the GitHub source only reads JSON files whose names are listed in `MCP_GITHUB_FILENAMES` (default `pt.json` and `en.json`), at any depth of each repository in `MCP_GITHUB_REPOS`, and searches the string values inside them. CSV, Markdown and other formats are not supported. Repositories without matching files return no results and no error.
 -   **WordPress:** the site's REST API (`/wp-json/wp/v2/posts`) must be publicly readable.
 
 ---
 
-## 5. Security Checklist for Replicators
+## 5. Reference Consent Portal
+
+`portal/` holds a minimal consent page that implements the consent step of the [API Contracts](../1-technical/api-contracts.md). It uses no build step: plain HTML, CSS and JavaScript, with the Firebase SDK loaded from Google's CDN with integrity hashes.
+
+```text
+portal/
+├── authorize/
+│   ├── index.html       # served at /authorize, the endpoint advertised by the server
+│   ├── authorize.js     # Google sign-in, POST /api/oauth/approve, redirect
+│   ├── consent.js       # request validation and destination checks (no DOM)
+│   └── authorize.css
+├── config.example.js    # copy to config.js (ignored by git)
+└── tests/               # node --test "portal/tests/*.test.js"
+```
+
+### 5.1 What the page enforces
+
+-   Requires `client_id`, `code_challenge`, `code_challenge_method=S256` and an http(s) `redirect_uri`; anything else shows an error.
+-   Shows the **destination domain** before sign-in and a warning when it is neither a local address nor `claude.ai`.
+-   Follows only the `redirect_uri` returned by `/approve`, and only if it points to the domain the user was shown. **Deny** never redirects.
+-   Writes text with `textContent` only, keeps the Firebase session in memory (no `localStorage`), declares a Content Security Policy and a `no-referrer` policy, and refuses to run inside a frame.
+
+### 5.2 Run it locally (scenario C)
+
+```bash
+cp portal/config.example.js portal/config.js   # then fill in your Firebase web config
+python3 -m http.server 3000 --bind 127.0.0.1 -d portal
+```
+
+Set `OAUTH_PORTAL_BASE_URL=http://localhost:3000` on the server. Run the tests with `node --test "portal/tests/*.test.js"` (Node.js 22 or later).
+
+### 5.3 Publish it (scenario B)
+
+1.  Create `portal/config.js` with your Firebase web config and `serverBaseUrl` set to your `OAUTH_SERVER_BASE_URL`.
+2.  If the server is not on the same origin as the portal, add its origin to `connect-src` in the page's Content Security Policy (`portal/authorize/index.html`).
+3.  Upload the contents of `portal/` (without `tests/` and `package.json`) to the GCS bucket behind your Load Balancer, so the page answers at `https://<your-domain>/authorize/`.
+4.  Configure the backend bucket to send `Content-Security-Policy: frame-ancestors 'none'` as a custom response header: this protection cannot be declared in the page itself.
+5.  Add your domain to **Authentication > Settings > Authorized domains** in the Firebase console.
+
+The reference portal has no automated end-to-end test yet: the Google sign-in and the call to `/approve` are checked by hand.
+
+---
+
+## 6. Security Checklist for Replicators
 
 Check every item before exposing your instance.
 
