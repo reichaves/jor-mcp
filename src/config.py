@@ -31,8 +31,8 @@ TIER_QUOTAS: dict[str, int] = {
 
 Single definition of which roles exist: the authentication middleware rejects
 any token whose ``tier`` claim is not a key here, and the rate limiter reads the
-quota from the same mapping. Roles are assigned manually by Ambiental Media on
-the ``allowed_users`` Firestore documents.
+quota from the same mapping. Roles are assigned manually by the instance
+administrators on the ``allowed_users`` Firestore documents.
 """
 
 # ---------------------------------------------------------------------------
@@ -112,8 +112,9 @@ ALLOWED_USERS_COLLECTION: str = os.environ.get("ALLOWED_USERS_COLLECTION", "allo
 """Firestore collection whitelisting who may complete consent.
 
 Each document id is a user email; the user is granted access only when the
-document exists and its ``status`` field equals ``"active"``. Managed manually
-by Ambiental Media (e.g. via the Firebase console)."""
+document exists, its ``status`` field equals ``"active"`` and its ``tier`` names
+a known role. Managed manually by the instance administrators (e.g. via the
+Firebase console)."""
 
 FIREBASE_WEB_API_KEY: str = os.environ.get("FIREBASE_WEB_API_KEY", "")
 """Firebase Web API key used by the token endpoint to exchange a custom token for

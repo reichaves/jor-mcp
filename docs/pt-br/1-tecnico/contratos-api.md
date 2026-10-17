@@ -17,7 +17,7 @@ O servidor Jor-MCP expõe sua interface Model Context Protocol (MCP) exclusivame
 
 ## 1. `search_content`
 
-**Objetivo:** Pesquisa unificada de texto completo em todas as propriedades da Ambiental Media (sites WordPress e microsites Next.js).
+**Objetivo:** Pesquisa unificada de texto completo no site WordPress e nos repositórios GitHub configurados (por exemplo, o site WordPress e os microsites Next.js da Ambiental Media).
 
 ### Parâmetros de Solicitação
 | Nome | Tipo | Obrigatório | Padrão | Descrição |

@@ -141,6 +141,9 @@ By default, anyone with a Google account can sign in to your Firebase app, creat
 3.  Uncheck the option **"Enable create (sign-up)"** (or **"Permitir criação de contas"**).
 4.  Save your changes. This ensures only accounts pre-provisioned or matching existing records can be authenticated, although Google SSO will still act as a secure authenticator for valid, existing identities.
 
+> [!WARNING]
+> With sign-up disabled, Firebase also refuses the **first** Google login of a user who has never signed in, even if their email is in `allowed_users`. Disable sign-up after each user has signed in once, and re-enable it briefly whenever you onboard someone new.
+
 ### 3.2 Disable Email & Password Sign-In
 To prevent attackers from attempting credential stuffing attacks or bypassing Google SSO:
 1.  In the **Firebase Console**, go to **Authentication > Sign-in method**.
@@ -176,7 +179,28 @@ Add a document under the `allowed_users` collection with the following specifica
     -   `status` (String): Must be set to `"active"` to permit access. If set to `"disabled"` or any other value, authorization will be rejected.
     -   `tier` (String, **Required**): The user's role. Must be `"basic"` or `"pro"` — it dictates the monthly request limit applied to this user. **A user with no `tier` (or a value outside those two) cannot complete consent and receives `403` on every call to the MCP server.** Assigning the role is manual and part of onboarding.
 
-> **Propagation and revocation:** the role is mirrored into the user's `tier` custom claim on Firebase Auth at consent time and re-checked on every token renewal. Changing `tier`, setting `status: "disabled"` or deleting the document takes effect within one hour — the lifetime of the issued ID token — with no action required from the user. A user who loses authorization has their refresh tokens revoked on the next renewal, which ends their access rather than merely denying that one request.
+> **Propagation and revocation:** the role is mirrored into the user's `tier` custom claim on Firebase Auth at consent time and re-checked on every token renewal. Changing `tier`, setting `status: "disabled"` or deleting the document takes effect within one hour — the lifetime of the issued ID token — with no action required from the user. A user who loses authorization has their refresh tokens revoked on the next renewal, which ends their access rather than merely denying that one request. To end access immediately, follow the full revocation in [section 5.2](#52-revoking-a-user).
+
+### 5.2 Revoking a User
+When someone must lose access (for example, they leave the newsroom), complete all three steps:
+
+1.  **Allow-list:** set `status` to `"disabled"` in their `allowed_users` document (or delete the document).
+2.  **Role claim:** remove the `tier` custom claim from their Firebase account.
+3.  **Sessions:** revoke their refresh tokens.
+
+Steps 2 and 3 use the Firebase Admin SDK, run with credentials that hold `roles/firebaseauth.admin`:
+
+```python
+import firebase_admin
+from firebase_admin import auth
+
+firebase_admin.initialize_app()
+user = auth.get_user_by_email("user@domain.com")
+auth.set_custom_user_claims(user.uid, None)
+auth.revoke_refresh_tokens(user.uid)
+```
+
+An ID token issued before the revocation stays valid until it expires (at most one hour). A `scripts/revoke_user.py` helper that runs the three steps is planned.
 
 ---
 
@@ -210,7 +234,7 @@ To enable the deployment workflows in your repository, navigate to **Settings > 
 | :--- | :--- | :--- |
 | `GCP_SA_KEY` | JSON key of a GCP Service Account with permissions to write to Artifact Registry and deploy to Cloud Run. | *(Required)* |
 | `GCP_PROJECT_ID` | Your Google Cloud project ID. | `my-mcp-project-123` |
-| `GCP_PROJECT_NUMBER` | Your Google Cloud project number (used in the Knative service annotations). | `959918358302` |
+| `GCP_PROJECT_NUMBER` | Your Google Cloud project number (used in the Knative service annotations). | `123456789012` |
 
 ### 8.2 Available Workflows
 Our repository contains pre-configured workflows that you can adapt:
@@ -218,6 +242,46 @@ Our repository contains pre-configured workflows that you can adapt:
 -   **`cd.yml`**: Triggers a manual deployment flow via GitHub's `workflow_dispatch` (allowing you to select exactly which image tag to deploy to Cloud Run without auto-deploying every merge).
 
 For detailed documentation on the internal testing gates, versioning mechanisms, and detailed pipeline jobs, please refer to the **[Contributing Guide](../../../CONTRIBUTING.md#continuous-integration-ci)**.
+
+### 8.3 Keyless Authentication with Workload Identity Federation
+`GCP_SA_KEY` is a long-lived service account key stored in GitHub. Workload Identity Federation lets GitHub Actions authenticate with short-lived tokens instead, so no key exists to leak. The included workflows still use `GCP_SA_KEY`; switching requires the steps below.
+
+1.  Create a workload identity pool and a GitHub OIDC provider restricted to your repository, and allow it to impersonate the deployment service account:
+
+    ```bash
+    gcloud iam workload-identity-pools create github \
+      --project "<project-id>" --location=global
+
+    gcloud iam workload-identity-pools providers create-oidc github-oidc \
+      --project "<project-id>" --location=global \
+      --workload-identity-pool=github \
+      --issuer-uri="https://token.actions.githubusercontent.com" \
+      --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+      --attribute-condition="assertion.repository=='<owner>/<repo>'"
+
+    gcloud iam service-accounts add-iam-policy-binding \
+      <deployer-sa>@<project-id>.iam.gserviceaccount.com \
+      --project "<project-id>" \
+      --role="roles/iam.workloadIdentityUser" \
+      --member="principalSet://iam.googleapis.com/projects/<project-number>/locations/global/workloadIdentityPools/github/attribute.repository/<owner>/<repo>"
+    ```
+
+2.  In `ci.yml` and `cd.yml`, remove the **Decode credentials** step and replace `credentials_json` in the **Authenticate to Google Cloud** step:
+
+    ```yaml
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/<project-number>/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: <deployer-sa>@<project-id>.iam.gserviceaccount.com
+    ```
+
+3.  Run both workflows once, then delete the `GCP_SA_KEY` secret and the service account key in the Google Cloud console.
 
 ---
 
@@ -233,7 +297,7 @@ Export the required environment variables and use `envsubst` to replace the plac
 
 ```bash
 export IMAGE_URL="us-central1-docker.pkg.dev/jor-mcp/jor-mcp/jor-mcp-server:SHA"
-export GCP_PROJECT_NUMBER="959918358302"
+export GCP_PROJECT_NUMBER="123456789012"
 export GCP_PROJECT_ID="jor-mcp"
 export FIREBASE_PROJECT_ID="..."
 export WORDPRESS_API_URL="..."

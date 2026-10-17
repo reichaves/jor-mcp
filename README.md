@@ -12,7 +12,7 @@
 
 ## Status
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)](#installation-via-docker)[![codecov](https://codecov.io/github/ambiental-media/jor-mcp/graph/badge.svg?token=AHANHTFVR5)](https://codecov.io/github/ambiental-media/jor-mcp)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)](#installation-via-docker-recommended)[![codecov](https://codecov.io/github/ambiental-media/jor-mcp/graph/badge.svg?token=AHANHTFVR5)](https://codecov.io/github/ambiental-media/jor-mcp)
 
 ### ⚠️ Project Status: Beta
 
@@ -43,6 +43,10 @@ We are gearing up to test the **replicability** of `jor-mcp` by deploying and ad
 Originally developed by [Ambiental Media](https://ambiental.media/) with support from global journalism initiatives, this server bridges the gap between Large Language Models (LLMs) and standard newsroom infrastructure, allowing AI agents to securely search, retrieve, and analyze content across your organization's WordPress instances and internal GitHub repositories.
 
 By deploying your own instance of `jor-mcp`, your newsroom can empower AI workflows to fact-check against your own archives, summarize internal reports, and seamlessly access proprietary data context.
+
+## Use It with Your Newsroom's Data
+
+`jor-mcp` is not limited to Ambiental Media's content: you can run your own instance on your WordPress site and GitHub repositories, or test it locally first. Several defaults still point to Ambiental Media, so set every required variable. See **[Connect Your Newsroom's Data](docs/en/2-replication/connect-your-newsroom.md)** for the connection scenarios, the variables per scenario and the security checklist.
 
 ## Features
 
@@ -137,7 +141,7 @@ If you wish to modify the code or run the server outside of a container, you wil
 3.  **Install dependencies:** `uv sync`
 4.  **Create the `.env` file** as shown in the Docker section.
 5.  **Authenticate with Google Cloud:** `gcloud auth application-default login`
-6.  **Run the server:** `uv run --env-file .env uvicorn src.server:app --host 0.0.0.0 --port 8080`
+6.  **Run the server:** `uv run --env-file .env uvicorn src.server:app --host 127.0.0.1 --port 8080`. Keep `127.0.0.1` so that only your machine can reach the server.
 7.  **Check it is up:** `curl http://localhost:8080/health` (this route needs no authentication).
 
 To work on the code without a Google Cloud project, run the test suite with `uv run pytest`: the tests mock Firebase, Firestore and all HTTP calls.

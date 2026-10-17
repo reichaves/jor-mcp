@@ -4,15 +4,18 @@
 
 # Conectando a LLMs
 
-Para conectar o Claude Desktop (ou outros agentes compatíveis com MCP) ao servidor Jor-MCP da Ambiental Media, siga estas instruções simples passo a passo.
+Esta página explica como conectar o Claude Desktop, o Claude Code e outros clientes compatíveis com MCP a um servidor Jor-MCP. Há dois casos:
 
-O processo de conexão foi totalmente modernizado e é concluído inteiramente por meio da interface interativa do Claude e do seu navegador, garantindo uma experiência contínua.
+-   **[Instância da Ambiental Media](#instância-da-ambiental-media):** pesquisa o conteúdo da Ambiental Media. A sua conta Google precisa estar na allow-list da Ambiental Media.
+-   **[Sua Própria Instância](#sua-própria-instância):** pesquisa o WordPress e o GitHub da sua redação. Veja [Conectar os Dados da Sua Redação](../2-replicacao/conectar-sua-redacao.md) para configurá-la.
+
+A conexão é concluída pelo cliente e pelo seu navegador: o cliente abre o portal de consentimento, você entra com o Google e o cliente recebe os tokens.
 
 ---
 
-## Passo a Passo do Fluxo de Autorização no Navegador
+## Instância da Ambiental Media
 
-Siga estes passos com as telas de interface correspondentes para criar sua conexão segura:
+Siga estes passos com as telas de interface correspondentes para conectar o Claude Desktop:
 
 ### Passo 1: Abrir o Menu de Personalização
 No Claude Desktop, clique no botão **"Customize"** no canto inferior esquerdo para abrir o menu de configurações e opções.
@@ -53,6 +56,32 @@ Retorne ao Claude Desktop. Você já está pronto para realizar buscas, buscar a
 
 ---
 
+## Sua Própria Instância
+
+Troque `<seu-dominio>` pelo domínio público da sua instância. O servidor monta o endpoint MCP em `/mcp`; materiais mais antigos citam `/mcp/sse`, então confirme o caminho com um cliente já autenticado.
+
+### Claude Desktop e claude.ai
+
+Siga os mesmos passos da instância da Ambiental Media, informando `https://<seu-dominio>/mcp` como **URL do Conector** no Passo 3. A conexão parte dos servidores da Anthropic, então a URL precisa ser HTTPS pública.
+
+### Claude Code
+
+```bash
+claude mcp add --transport http jor-mcp https://<seu-dominio>/mcp
+```
+
+Para uma instância local de testes, use `http://localhost:8080/mcp`. O Claude Code abre o navegador para o login e recebe o callback num endereço de loopback.
+
+### MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+Escolha o transporte **Streamable HTTP**, informe a URL do servidor e inicie o fluxo OAuth. O Inspector mostra cada etapa do OAuth e lista as ferramentas disponíveis, o que ajuda a depurar uma instância nova.
+
+---
+
 ## Autenticação Persistente
 
 Uma vez concluído o login inicial, sua autenticação é persistente. O Claude Desktop gerencia automaticamente a renovação do token em segundo plano usando *Refresh Tokens* de longa duração. Você não precisará se autenticar novamente nem reconfigurar suas configurações manualmente, mesmo se reiniciar o Claude Desktop diariamente.
@@ -60,6 +89,8 @@ Uma vez concluído o login inicial, sua autenticação é persistente. O Claude 
 ---
 
 ## Upgrades de Nível (Planos Pagos)
+
+Na sua própria instância, um administrador altera o `tier` do usuário em `allowed_users` ([guia de implantação, seção 5](../2-replicacao/guia-de-implantacao.md#5-gerenciamento-manual-da-lista-branca-allowed_users)).
 
 Se você negociou um plano pago (nível `Pro`) com a Ambiental Media:
 1. Sua conta será atualizada por nossos administradores via **Console de Administração do Jor-MCP**.

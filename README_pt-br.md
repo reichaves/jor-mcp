@@ -12,7 +12,7 @@
 
 ## Estado
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)](#installation-via-docker)[![codecov](https://codecov.io/github/ambiental-media/jor-mcp/graph/badge.svg?token=AHANHTFVR5)](https://codecov.io/github/ambiental-media/jor-mcp)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)](#instalação-via-docker-recomendado)[![codecov](https://codecov.io/github/ambiental-media/jor-mcp/graph/badge.svg?token=AHANHTFVR5)](https://codecov.io/github/ambiental-media/jor-mcp)
 
 ### ⚠️ Estado do Projeto: Beta
 
@@ -43,6 +43,10 @@ Estamos nos preparando para testar a **replabilidade** do `jor-mcp`, instalando 
 Originalmente desenvolvido pela [Ambiental Media](https://ambiental.media/) com apoio de iniciativas globais de jornalismo, este servidor preenche a lacuna entre Grandes Modelos de Linguagem (LLMs) e a infraestrutura padrão das redações, permitindo que agentes de IA pesquisem, recuperem e analisem conteúdo com segurança em instâncias do WordPress e repositórios GitHub internos da sua organização.
 
 Ao implantar sua própria instância do `jor-mcp`, sua redação pode capacitar fluxos de trabalho de IA para verificar fatos contra seus próprios arquivos, resumir relatórios internos e acessar dados proprietários com segurança.
+
+## Usar com os Dados da Sua Redação
+
+O `jor-mcp` não se limita ao conteúdo da Ambiental Media: você pode ter a sua própria instância, ligada ao seu site WordPress e aos seus repositórios no GitHub, ou testá-la localmente antes. Vários valores padrão ainda apontam para a Ambiental Media, então defina todas as variáveis obrigatórias. Veja **[Conectar os Dados da Sua Redação](docs/pt-br/2-replicacao/conectar-sua-redacao.md)** para os cenários de conexão, as variáveis por cenário e o checklist de segurança.
 
 ## Funcionalidades
 
@@ -136,7 +140,7 @@ Se você deseja modificar o código ou executar o servidor fora de um container,
 3.  **Instale as dependências:** `uv sync`
 4.  **Crie o arquivo `.env`** como mostrado na seção do Docker.
 5.  **Autentique-se no Google Cloud:** `gcloud auth application-default login`
-6.  **Execute o servidor:** `uv run --env-file .env uvicorn src.server:app --host 0.0.0.0 --port 8080`
+6.  **Execute o servidor:** `uv run --env-file .env uvicorn src.server:app --host 127.0.0.1 --port 8080`. Mantenha o `127.0.0.1` para que só a sua máquina alcance o servidor.
 7.  **Confira se subiu:** `curl http://localhost:8080/health` (essa rota não exige autenticação).
 
 Para mexer no código sem um projeto Google Cloud, rode os testes com `uv run pytest`: eles simulam o Firebase, o Firestore e todas as chamadas HTTP.

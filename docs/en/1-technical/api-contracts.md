@@ -17,7 +17,7 @@ The Jor-MCP server exposes its Model Context Protocol (MCP) interface exclusivel
 
 ## 1. `search_content`
 
-**Purpose:** Unified full-text search across all Ambiental Media properties (WordPress sites and Next.js microsites).
+**Purpose:** Unified full-text search across the configured WordPress site and GitHub repositories (e.g. Ambiental Media's WordPress site and Next.js microsites).
 
 ### Request Parameters
 | Name | Type | Required | Default | Description |
