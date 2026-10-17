@@ -21,6 +21,7 @@ dependencies = [
     "pydantic>=2.8.0",
     "google-cloud-firestore>=2.21.0",
     "urllib3>=2.8.0",
+    "mcp>=1.30.0",
     "beautifulsoup4>=4.14.3",
     "opentelemetry-instrumentation-starlette>=0.46b0",
 ]
