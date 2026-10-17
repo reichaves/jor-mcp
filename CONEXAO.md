@@ -25,7 +25,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fase 1 executada em 2026-10-17. Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 e 2 executadas em 2026-10-17. Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -321,6 +321,28 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 
 **Aceite:** `make check` verde, com cobertura de 90% ou mais e Bandit sem achados novos.
 
+**Resultado (2026-10-17):** commit `59c1766`, na branch `feat/phase2-replication-hardening`, criada a partir de `docs/phase1-connect-newsroom` (#10). Ainda sem push.
+
+| Item | Situação |
+|---|---|
+| 1 | Feito. `_warn_on_ambiental_defaults` em `src/server.py`, chamado no `server_lifespan` com o projeto resolvido por `_resolve_gcp_project_id()` da telemetria. No projeto `jor-mcp` (o da Ambiental, conforme o `cd.yml`) não há aviso. A comparação é pelo domínio exato, então `notambiental.media` não dispara. 4 testes em `tests/test_server.py` |
+| 2 | Feito. `MCP_GITHUB_FILENAMES` em `src/config.py` (`parse_github_filenames`, padrão `"pt.json,en.json"`) substitui `_I18N_FILENAMES` em `src/services/github.py`. Nomes sem `.json` são descartados; uma lista vazia pula o GitHub com aviso. A variável não entrou no `service.yaml`, porque um valor vazio desligaria a fonte. 6 testes em `tests/test_github_service.py` |
+| 3 | Feito. `scripts/revoke_user.py <email> [--dry-run]`, com o e-mail em minúsculas como no servidor; se não houver conta no Firebase, só informa. 4 testes em `tests/test_revoke_user.py` |
+| 4 | Feito. `firestore.rules` nega todo acesso de clientes. O guia de implantação (§4, item 2) explica a publicação pelo console ou pelo CLI e lembra que um banco nomeado tem regras próprias |
+| 5 | Feito. `OAUTH_SERVER_BASE_URL`, `OAUTH_PORTAL_BASE_URL` e `CORS_ALLOWED_ORIGINS` no `service.yaml`, vindos de variáveis do repositório no `cd.yml`. O deploy é interrompido se alguma estiver vazia, porque um valor vazio substitui o padrão em vez de cair nele. **Efeito:** quem usa o `cd.yml`, inclusive a Ambiental se a mudança for proposta na Fase 5, precisa criar essas três variáveis antes do próximo deploy |
+| 6 | **Não feito.** O R16 continua dependendo da decisão 2 da §8 |
+
+**Aceite conferido:**
+- **Código:** lint, formatação e tipos sem erros; 345 testes passando (eram 331), cobertura de 100%.
+- **Bandit:** sem achados em `src/` e em `scripts/revoke_user.py`. Os avisos de `nosec` são de código anterior em `oauth.py`.
+- **Documentação:** 0 links internos quebrados; inglês e português sincronizados.
+- **Testes reais, só leitura:**
+  - Uma instância temporária em `127.0.0.1:8081`, com `OAUTH_PORTAL_BASE_URL` da Ambiental, registrou o aviso com `["WORDPRESS_API_URL", "OAUTH_PORTAL_BASE_URL"]`. O WordPress apareceu porque o `.env` local ainda usa o site da Ambiental, por falta de outro site para testar.
+  - `revoke_user.py --dry-run` no projeto `jor-mcp-m78bp5-8e56c` informou o que faria e confirmou que a conta de teste ainda não existe no Firebase Auth.
+  - A renderização do `service.yaml` com o `envsubst` do `cd.yml` não deixou nenhum `${...}`, e o deploy para quando falta o `CORS_ALLOWED_ORIGINS`.
+- **Não passou:** o `check-deps` acusou a CVE-2026-59951 no `mcp` 1.29.1, que chega pelo `fastmcp` e é anterior a esta fase (o lock é o mesmo do original). A correção é `uv lock --upgrade-package mcp`, num PR separado (decisão 6 da §8).
+- **Não rodou:** o `check-container`, porque o `docker` e o `trivy` não estão instalados nesta máquina.
+
 ### Fase 3: portal de login de referência
 **Arquivos:** `portal/authorize.html`, `portal/authorize.js`, `portal/config.example.js` e, no `.gitignore`, a linha `portal/config.js`.
 
@@ -393,3 +415,4 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 3. **Fase 5:** contribuir com o original? Se sim, comunicar S3 e S4 em privado primeiro.
 4. **Faturamento:** o cenário B exige faturamento no GCP (Cloud Run e Load Balancer). O cenário C não exige.
 5. **Fase 0:** decidir se a branch `chore/sync-upstream-0.13.1` vai para `main` por PR no fork.
+6. **CVE-2026-59951 no `mcp`:** atualizar para a 1.30.0 ou superior (`uv lock --upgrade-package mcp`) num PR separado, como foi feito com o `urllib3`.
