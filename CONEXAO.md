@@ -26,7 +26,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A e B feitas; Parte C em andamento, só com o GitHub (o site indicado não é WordPress; veja a Fase 4.6). PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`) e #15 (Fase 4.5, Parte B, sobre o #13). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A, B e C feitas; a Parte C foi só com o GitHub, porque o site indicado não é WordPress (veja a Fase 4.6). PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`) e #15 (Fase 4.5, Parte B, sobre o #13). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -529,6 +529,28 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 7. **C7:** registrar os resultados aqui, atualizar o trace e abrir o PR da Parte B, empilhado sobre o #13.
 
 **Aceite da Parte C:** os itens 14 a 17 da §7 passam. **Para desfazer:** voltar o `.env` aos valores anteriores e revogar o token no GitHub.
+
+**Resultado da Parte C (2026-10-17), só com o GitHub:**
+- **C4:** o usuário gravou um token fine-grained ("Public repositories (read-only)") no `.env`. Conferido sem exibir o valor: formato `github_pat_`, aceito pelo GitHub, com limite de 5.000 requisições por hora. `MCP_GITHUB_REPOS` e `MCP_GITHUB_FILENAMES=*.json,*.md` foram passados na linha de comando, porque não são segredo.
+- **C5:** servidor da branch `feat/phase45-github-formats` em `127.0.0.1:8080`. O WordPress continua o da Ambiental (item 14 bloqueado).
+- **C6, pelo Claude Code:**
+  - `search_content("lobbying")`: 25 resultados, todos de `github:reichaves/lobbying_us`, de arquivos `.md` e `.json`;
+  - `search_content("anchor journalism")`: 8 resultados `.md` de `reichaves/anchor_journalism`;
+  - `search_content("masterzap")`: 2 resultados de `rafaelbressan/masterzap` (`README.md` e `vercel.json`).
+- **Log:** a primeira busca baixou **107 arquivos dos 3 repositórios** em cerca de 1 s, sem falhas de leitura. O limite de 1 MB pulou exatamente os 2 arquivos grandes (`reference_outputs/resolved_positions.json`, 2,5 MB, e `data/messages.json`, 14,8 MB), com aviso só de repositório, caminho e tamanho. A segunda busca veio do cache ("Served GitHub content from cache"), sem chamadas novas ao GitHub.
+
+| Item da §7 | Situação |
+|---|---|
+| 14. Outro WordPress | Bloqueado: o site indicado não é WordPress (Fase 4.6) |
+| 15. Formatos | Passou para JSON e Markdown. Não havia CSV nos repositórios; o CSV está coberto pelos testes automáticos (decisão do usuário) |
+| 16. Repositório privado | Não testado: os três repositórios são públicos |
+| 17. Cache | Passou |
+
+**Achados do teste real** (melhorias possíveis, não implementadas):
+- **Muitos resultados:** a busca no GitHub não limita quantos arquivos devolve; `lobbying` trouxe 25 de uma vez. Um limite (por exemplo, 10, com o total informado) reduziria respostas longas para o modelo.
+- **Arquivos de configuração entram na busca:** `CLAUDE.md`, `GEMINI.md`, `.claude/settings.json` e `vercel.json` aparecem como conteúdo. Os padrões só olham o nome do arquivo; uma lista de exclusão por pasta ou nome (por exemplo `MCP_GITHUB_EXCLUDE=.claude/*,CLAUDE.md`) resolveria.
+- **Conteúdo sensível de terceiros:** o `README.md` do `rafaelbressan/masterzap` descreve o material como conversas de vazamentos. Indexá-lo vai além da decisão R9 (quem pode ler): envolve avaliação editorial e de proteção de dados (LGPD) pela redação.
+- **Descrição da ferramenta em cache no cliente:** o Claude Code manteve a descrição anterior de `search_content` na sessão já aberta; o servidor já servia a nova. Clientes atualizam a descrição numa sessão nova ou ao reconectar.
 
 ### Fase 4.6: fonte para sites sem WordPress (plano, não aprovado)
 **Objetivo:** permitir que a instância pesquise um site que não é WordPress, a começar por `https://abraji.org.br`, que a Fase 4.5 mostrou não ter REST API, RSS nem sitemap.
