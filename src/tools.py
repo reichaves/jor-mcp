@@ -9,7 +9,7 @@ import httpx
 from fastmcp.exceptions import ToolError
 from pydantic import BaseModel, ValidationError
 
-from src.config import GITHUB_REPOS, WP_API_BASE_URL
+from src.config import GITHUB_MAX_RESULTS, GITHUB_REPOS, WP_API_BASE_URL
 from src.http_client import get_http_client
 from src.server import mcp
 from src.services.github import fetch_github_i18n_content
@@ -116,6 +116,22 @@ def _collect_strings(data: Any, normalized_query: str, *, limit: int = 5) -> lis
     return matches[:limit]
 
 
+def _count_matches(data: Any, normalized_query: str) -> int:
+    """Count occurrences of *normalized_query* in every string value of *data*.
+
+    Used to rank GitHub files: a Markdown file is a single string, so counting
+    occurrences (rather than matching strings) treats it fairly against JSON or
+    CSV files with many small values.
+    """
+    if isinstance(data, str):
+        return _normalize(data).count(normalized_query)
+    if isinstance(data, dict):
+        return sum(_count_matches(value, normalized_query) for value in data.values())
+    if isinstance(data, list):
+        return sum(_count_matches(item, normalized_query) for item in data)
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Private search helpers
 # ---------------------------------------------------------------------------
@@ -192,37 +208,61 @@ async def _search_github(query: str) -> list[dict[str, Any]]:
     Args:
         query: The keyword or phrase to search for.
 
+    Files are ranked by how often the query appears in them and at most
+    ``MCP_GITHUB_MAX_RESULTS`` are returned (``0`` returns all); when some are
+    left out, a final ``notice`` item states the total.
+
     Returns:
         A list of result dicts with keys: ``id``, ``title``, ``excerpt``,
-        ``date``, ``link``, ``source``.
+        ``date``, ``link``, ``source``, possibly followed by one dict with
+        ``notice`` and ``source``.
     """
     all_files = await fetch_github_i18n_content()
     normalized_query = _normalize(query)
-    results: list[dict[str, Any]] = []
+    scored: list[tuple[int, dict[str, Any]]] = []
 
     for file_item in all_files:
         repo: str = file_item["repo"]
         path: str = file_item["path"]
-        data: dict[str, Any] = file_item["data"]
+        data: Any = file_item["data"]
 
         snippets = _collect_strings(data, normalized_query)
         if not snippets:
             continue
 
+        scored.append(
+            (
+                _count_matches(data, normalized_query),
+                {
+                    "id": f"{repo}/{path}",
+                    "title": f"{repo.split('/')[-1]} / {path}",
+                    "excerpt": snippets[0],
+                    "date": "",
+                    "link": f"https://github.com/{repo}/blob/HEAD/{path}",
+                    "source": f"github:{repo}",
+                },
+            )
+        )
+
+    # Stable sort: files with the same count keep the repository order.
+    scored.sort(key=lambda item: item[0], reverse=True)
+    total = len(scored)
+    shown = scored if GITHUB_MAX_RESULTS <= 0 else scored[:GITHUB_MAX_RESULTS]
+    results = [result for _, result in shown]
+    if len(results) < total:
         results.append(
             {
-                "id": f"{repo}/{path}",
-                "title": f"{repo.split('/')[-1]} / {path}",
-                "excerpt": snippets[0],
-                "date": "",
-                "link": f"https://github.com/{repo}/blob/HEAD/{path}",
-                "source": f"github:{repo}",
+                "notice": (
+                    f"GitHub: mostrando {len(results)} de {total} arquivos encontrados, "
+                    "ordenados pelo número de ocorrências. Refine a busca para ver outros."
+                ),
+                "source": "github",
             }
         )
 
     logger.info(
         "GitHub search completed",
-        extra={"query": query, "result_count": len(results)},
+        extra={"query": query, "result_count": len(shown), "total_matches": total},
     )
     return results
 
@@ -328,6 +368,9 @@ async def _safe_search_github(
         "\n  • 'date': data de publicação (AAAA-MM-DD) ou vazio para GitHub;"
         "\n  • 'link': URL canônica para acessar o conteúdo completo;"
         "\n  • 'source': origem ('wordpress' ou 'github:<repo>')."
+        "\nOs arquivos do GitHub vêm ordenados pelo número de ocorrências do termo e "
+        "limitados; quando há mais, um último item com 'notice' informa o total — "
+        "repita a busca com termos mais específicos se precisar dos demais."
         "\n\nPÓS-BUSCA: Use sempre 'get_full_article' com o 'link' ou 'id' retornado "
         "para obter o texto integral de qualquer matéria antes de citar seu conteúdo."
     )

@@ -368,6 +368,42 @@ class TestSearchGithub:
         assert "Altamira" in results[1]["excerpt"]
         assert results[1]["link"] == "https://github.com/redacao/pautas/blob/HEAD/notas/altamira.md"
 
+    async def test_ranks_by_occurrences_and_caps_with_notice(
+        self, mock_fetch_github_i18n_content: AsyncMock
+    ) -> None:
+        """Files are ordered by how often the term appears; extras become a notice."""
+        mock_fetch_github_i18n_content.return_value = [
+            {"repo": "r/a", "path": "um.json", "data": {"t": "pantanal", "ano": 2026}},
+            {"repo": "r/a", "path": "tres.md", "data": {"text": "Pantanal, pantanal e PANTANAL"}},
+            {"repo": "r/b", "path": "dois.csv", "data": [{"c": "pantanal"}, {"c": "Pantanal"}]},
+            {"repo": "r/b", "path": "nada.json", "data": {"n": 42}},
+        ]
+
+        with patch("src.tools.GITHUB_MAX_RESULTS", 2):
+            results = await _search_github("pantanal")
+
+        assert [r.get("id") for r in results[:2]] == ["r/a/tres.md", "r/b/dois.csv"]
+        assert results[2] == {
+            "notice": (
+                "GitHub: mostrando 2 de 3 arquivos encontrados, ordenados pelo número de "
+                "ocorrências. Refine a busca para ver outros."
+            ),
+            "source": "github",
+        }
+
+    async def test_zero_max_results_returns_everything(
+        self, mock_fetch_github_i18n_content: AsyncMock
+    ) -> None:
+        mock_fetch_github_i18n_content.return_value = [
+            {"repo": "r/a", "path": f"f{i}.md", "data": {"text": "cerrado"}} for i in range(12)
+        ]
+
+        with patch("src.tools.GITHUB_MAX_RESULTS", 0):
+            results = await _search_github("cerrado")
+
+        assert len(results) == 12
+        assert all("notice" not in r for r in results)
+
     async def test_empty_files_returns_empty(
         self, mock_fetch_github_i18n_content: AsyncMock
     ) -> None:

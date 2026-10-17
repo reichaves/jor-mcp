@@ -31,6 +31,7 @@ from pydantic import BaseModel, ValidationError
 from src.config import (
     GITHUB_API_BASE_URL,
     GITHUB_CACHE_SECONDS,
+    GITHUB_EXCLUDE,
     GITHUB_FILENAMES,
     GITHUB_MAX_FILE_BYTES,
     GITHUB_MAX_FILES_PER_REPO,
@@ -164,6 +165,19 @@ def _matches_patterns(path: str) -> bool:
     return any(fnmatchcase(name, pattern) for pattern in GITHUB_FILENAMES)
 
 
+def _is_excluded(path: str) -> bool:
+    """Return True when the path matches an ``MCP_GITHUB_EXCLUDE`` pattern.
+
+    Patterns are compared with the full path; one without ``/`` is also compared
+    with the file name, so ``CLAUDE.md`` excludes that file at any depth.
+    """
+    name = Path(path).name
+    return any(
+        fnmatchcase(path, pattern) or ("/" not in pattern and fnmatchcase(name, pattern))
+        for pattern in GITHUB_EXCLUDE
+    )
+
+
 async def _fetch_file(
     client: httpx.AsyncClient,
     repo: str,
@@ -246,8 +260,9 @@ async def _discover_i18n_paths(
 
     Fetches the full recursive tree of the default branch and returns the path
     of every file whose name matches an ``MCP_GITHUB_FILENAMES`` pattern,
-    regardless of directory depth.  Files larger than ``MCP_GITHUB_MAX_FILE_BYTES``
-    are skipped and at most ``MCP_GITHUB_MAX_FILES_PER_REPO`` paths are kept.
+    regardless of directory depth, unless it matches an ``MCP_GITHUB_EXCLUDE``
+    pattern.  Files larger than ``MCP_GITHUB_MAX_FILE_BYTES`` are skipped and at
+    most ``MCP_GITHUB_MAX_FILES_PER_REPO`` paths are kept.
 
     Args:
         client: The shared async HTTP client.
@@ -302,7 +317,7 @@ async def _discover_i18n_paths(
 
     paths: list[str] = []
     for item in payload.tree:
-        if item.type != "blob" or not _matches_patterns(item.path):
+        if item.type != "blob" or not _matches_patterns(item.path) or _is_excluded(item.path):
             continue
         if item.size is not None and item.size > GITHUB_MAX_FILE_BYTES:
             logger.warning(
