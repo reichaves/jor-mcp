@@ -162,7 +162,7 @@ In Firebase, the `apiKey` acts as a public **project identifier** rather than a 
 ### How to Protect Your System
 Security **must not** rely on hiding the `apiKey`. Instead, protect your system via:
 1.  **GCP API Restrictions:** Go to the Google Cloud Console, navigate to **APIs & Services > Credentials**, find your Firebase API Key, and restrict its usage to your official web portal domain (e.g., `https://jormcp.ambiental.media`).
-2.  **Firestore Security Rules:** Ensure your NoSQL database is locked down so that clients can only read/write their permitted directories. For example, deny general write access to the `allowed_users` or `oauth_clients` collections.
+2.  **Firestore Security Rules:** Ensure your NoSQL database is locked down. Clients never need direct access, because the server uses the Admin SDK, which bypasses the rules. The repository ships `firestore.rules`, which denies every client request: in the **Firebase Console**, open **Firestore Database > Rules**, paste its contents and click **Publish**. With the Firebase CLI, point `firebase.json` at the file and run `firebase deploy --only firestore:rules`. A named database (`FIRESTORE_DATABASE_ID`) has its own rules and needs the same publication.
 
 ---
 
@@ -188,7 +188,14 @@ When someone must lose access (for example, they leave the newsroom), complete a
 2.  **Role claim:** remove the `tier` custom claim from their Firebase account.
 3.  **Sessions:** revoke their refresh tokens.
 
-Steps 2 and 3 use the Firebase Admin SDK, run with credentials that hold `roles/firebaseauth.admin`:
+`scripts/revoke_user.py` runs the three steps. Use credentials that hold `roles/datastore.user` and `roles/firebaseauth.admin`, and the same `.env` as the server:
+
+```bash
+uv run --env-file .env python scripts/revoke_user.py user@domain.com --dry-run
+uv run --env-file .env python scripts/revoke_user.py user@domain.com
+```
+
+To run steps 2 and 3 by hand instead, use the Firebase Admin SDK:
 
 ```python
 import firebase_admin
@@ -200,7 +207,7 @@ auth.set_custom_user_claims(user.uid, None)
 auth.revoke_refresh_tokens(user.uid)
 ```
 
-An ID token issued before the revocation stays valid until it expires (at most one hour). A `scripts/revoke_user.py` helper that runs the three steps is planned.
+An ID token issued before the revocation stays valid until it expires (at most one hour).
 
 ---
 
@@ -235,6 +242,8 @@ To enable the deployment workflows in your repository, navigate to **Settings > 
 | `GCP_SA_KEY` | JSON key of a GCP Service Account with permissions to write to Artifact Registry and deploy to Cloud Run. | *(Required)* |
 | `GCP_PROJECT_ID` | Your Google Cloud project ID. | `my-mcp-project-123` |
 | `GCP_PROJECT_NUMBER` | Your Google Cloud project number (used in the Knative service annotations). | `123456789012` |
+
+The CD workflow also reads repository **variables** (same page, **Variables** tab): `FIREBASE_PROJECT_ID`, `WORDPRESS_API_URL`, `MCP_GITHUB_REPOS`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `FIREBASE_WEB_API_KEY`, `OAUTH_SERVER_BASE_URL`, `OAUTH_PORTAL_BASE_URL` and `CORS_ALLOWED_ORIGINS`. The deploy stops if any of the last three is empty: an empty value would override the default and break the OAuth login.
 
 ### 8.2 Available Workflows
 Our repository contains pre-configured workflows that you can adapt:
@@ -304,8 +313,12 @@ export WORDPRESS_API_URL="..."
 export MCP_GITHUB_REPOS="..."
 export OTEL_EXPORTER_OTLP_ENDPOINT="..."
 export FIREBASE_WEB_API_KEY="..."
+export OAUTH_SERVER_BASE_URL="https://<your-domain>"
+export OAUTH_PORTAL_BASE_URL="https://<your-domain>"
+export CORS_ALLOWED_ORIGINS="https://<your-domain>"
 
-for v in IMAGE_URL GCP_PROJECT_NUMBER GCP_PROJECT_ID; do
+for v in IMAGE_URL GCP_PROJECT_NUMBER GCP_PROJECT_ID \
+         OAUTH_SERVER_BASE_URL OAUTH_PORTAL_BASE_URL CORS_ALLOWED_ORIGINS; do
   : "${!v:?set $v before running envsubst}"
 done
 

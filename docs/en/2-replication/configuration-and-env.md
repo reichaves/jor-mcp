@@ -30,7 +30,7 @@ Jor-MCP is designed as a fully serverless platform on **Google Cloud Platform (G
 Configure these variables in your Cloud Run service environment settings or local `.env` files.
 
 > [!IMPORTANT]
-> Variables marked **required outside Ambiental Media** default to Ambiental Media's own URLs. On any other instance, leave none of them unset: otherwise the server searches Ambiental Media's WordPress and sends your users to Ambiental Media's consent portal. See [Connect Your Newsroom's Data](connect-your-newsroom.md#2-required-variables-by-scenario) for the values per scenario.
+> Variables marked **required outside Ambiental Media** default to Ambiental Media's own URLs. On any other instance, leave none of them unset: otherwise the server searches Ambiental Media's WordPress and sends your users to Ambiental Media's consent portal. Outside Ambiental Media's GCP project, the server logs a warning at startup naming any of them that still points to `ambiental.media`. See [Connect Your Newsroom's Data](connect-your-newsroom.md#2-required-variables-by-scenario) for the values per scenario.
 
 ### 2.1 State & Rate Limiting (Firestore)
 -   `FIRESTORE_DATABASE_ID` (Default: `"(default)"`): The Firestore database ID. Override if utilizing a named database instance.
@@ -60,7 +60,8 @@ otherwise let anyone flood Firestore through `POST /api/oauth/register`.
 ### 2.3 External Content Source Configurations
 -   `WORDPRESS_API_URL` (Default: `"https://ambiental.media/wp-json"`; **required outside Ambiental Media**): Base URL of the target WordPress CMS API.
 -   `MCP_GITHUB_TOKEN` (Optional for public repos, recommended): Personal Access Token to authenticate against GitHub API.
--   `MCP_GITHUB_REPOS` (Default: empty, which disables the GitHub source): Comma-separated list of target GitHub repositories to search (in `owner/repo` format). Only files named `pt.json` or `en.json` are read.
+-   `MCP_GITHUB_REPOS` (Default: empty, which disables the GitHub source): Comma-separated list of target GitHub repositories to search (in `owner/repo` format). Only files named in `MCP_GITHUB_FILENAMES` are read.
+-   `MCP_GITHUB_FILENAMES` (Default: `"pt.json,en.json"`): Comma-separated file names searched in each repository, matched at any depth. Only `.json` names are kept, because the GitHub source decodes each file as JSON and searches its string values.
 -   `MCP_GITHUB_API_BASE_URL` (Default: `"https://api.github.com"`): Base API endpoint for GitHub REST calls.
 
 ### 2.4 Diagnostics & Telemetry

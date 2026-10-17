@@ -186,6 +186,28 @@ GITHUB_API_BASE_URL: str = os.environ.get(
 Environment variable: ``MCP_GITHUB_API_BASE_URL``.
 """
 
+
+def parse_github_filenames(raw: str) -> frozenset[str]:
+    """Parse a comma-separated list of file names, keeping only ``.json`` entries.
+
+    The GitHub source decodes every matched file as JSON and searches its string
+    values, so any other extension could never return results and is dropped.
+    """
+    names = (name.strip() for name in raw.split(","))
+    return frozenset(name for name in names if name.endswith(".json"))
+
+
+GITHUB_FILENAMES: frozenset[str] = parse_github_filenames(
+    os.environ.get("MCP_GITHUB_FILENAMES", "pt.json,en.json")
+)
+"""File names searched in each GitHub repository, matched at any depth.
+
+Comma-separated; only ``.json`` names are kept. Defaults to the ``pt.json`` and
+``en.json`` message files used by Ambiental Media's microsites.
+
+Environment variable: ``MCP_GITHUB_FILENAMES``.
+"""
+
 # ---------------------------------------------------------------------------
 # OpenTelemetry
 # ---------------------------------------------------------------------------

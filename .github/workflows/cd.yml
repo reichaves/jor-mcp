@@ -76,18 +76,24 @@ jobs:
           MCP_GITHUB_REPOS: ${{ vars.MCP_GITHUB_REPOS }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}
           FIREBASE_WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
+          OAUTH_SERVER_BASE_URL: ${{ vars.OAUTH_SERVER_BASE_URL }}
+          OAUTH_PORTAL_BASE_URL: ${{ vars.OAUTH_PORTAL_BASE_URL }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
         run: |
           # Fail fast on the placeholders whose blank value would corrupt the
-          # manifest itself: the image reference, the Secret Manager resource
-          # paths, and the service account email. The other variables feed
-          # plain env values and may legitimately be left unset.
-          for v in IMAGE_URL GCP_PROJECT_NUMBER GCP_PROJECT_ID; do
+          # manifest itself (the image reference, the Secret Manager resource
+          # paths, and the service account email) or silently break the OAuth
+          # login (the public URLs and CORS origins: an empty value overrides
+          # the default instead of falling back to it). The other variables
+          # feed plain env values and may legitimately be left unset.
+          for v in IMAGE_URL GCP_PROJECT_NUMBER GCP_PROJECT_ID \
+                   OAUTH_SERVER_BASE_URL OAUTH_PORTAL_BASE_URL CORS_ALLOWED_ORIGINS; do
             [ -n "${!v:-}" ] || { echo "::error::$v is empty"; exit 1; }
           done
 
           # Allowlist form: only these variables are substituted, leaving any
           # other "$" in the manifest untouched.
-          envsubst '${IMAGE_URL} ${GCP_PROJECT_NUMBER} ${GCP_PROJECT_ID} ${FIREBASE_PROJECT_ID} ${WORDPRESS_API_URL} ${MCP_GITHUB_REPOS} ${OTEL_EXPORTER_OTLP_ENDPOINT} ${FIREBASE_WEB_API_KEY}' \
+          envsubst '${IMAGE_URL} ${GCP_PROJECT_NUMBER} ${GCP_PROJECT_ID} ${FIREBASE_PROJECT_ID} ${WORDPRESS_API_URL} ${MCP_GITHUB_REPOS} ${OTEL_EXPORTER_OTLP_ENDPOINT} ${FIREBASE_WEB_API_KEY} ${OAUTH_SERVER_BASE_URL} ${OAUTH_PORTAL_BASE_URL} ${CORS_ALLOWED_ORIGINS}' \
             < service.yaml > service.rendered.yaml
           echo "----- Rendered manifest -----"
           cat service.rendered.yaml

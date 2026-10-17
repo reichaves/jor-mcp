@@ -65,7 +65,7 @@ Ask Ambiental Media to add your Google account to their allow-list, then follow 
 
 ## 2. Required Variables by Scenario
 
-Several defaults point to Ambiental Media. If you leave them unset, your instance searches Ambiental Media's WordPress and sends your users to Ambiental Media's consent portal. Set every variable marked **required** below. The full reference is in [Configuration and Environment](configuration-and-env.md).
+Several defaults point to Ambiental Media. If you leave them unset, your instance searches Ambiental Media's WordPress and sends your users to Ambiental Media's consent portal. Set every variable marked **required** below; the server logs a warning at startup naming any that still points to `ambiental.media`. The full reference is in [Configuration and Environment](configuration-and-env.md).
 
 | Variable | B (production) | C (local) |
 |---|---|---|
@@ -73,6 +73,7 @@ Several defaults point to Ambiental Media. If you leave them unset, your instanc
 | `FIREBASE_WEB_API_KEY` | **Required** | **Required** |
 | `WORDPRESS_API_URL` | **Required** (default is Ambiental Media) | **Required** (default is Ambiental Media) |
 | `MCP_GITHUB_REPOS` / `MCP_GITHUB_TOKEN` | Optional | Optional |
+| `MCP_GITHUB_FILENAMES` | Optional (default `pt.json,en.json`) | Optional (default `pt.json,en.json`) |
 | `OAUTH_SERVER_BASE_URL` | **Required**: `https://<your-domain>` | **Required**: `http://localhost:8080` |
 | `OAUTH_PORTAL_BASE_URL` | **Required**: your portal URL | **Required**: `http://localhost:3000` |
 | `CORS_ALLOWED_ORIGINS` | **Required**: your portal origin | The default already allows `http://localhost:3000` |
@@ -98,7 +99,7 @@ Several defaults point to Ambiental Media. If you leave them unset, your instanc
 ## 4. Known Limitations
 
 -   **Consent portal:** the production portal (`jor-mcp-site`) is a private repository. To complete the login flow on your own instance, you need a portal that implements the consent step described in [API Contracts](../1-technical/api-contracts.md). A minimal reference portal is planned.
--   **GitHub file format:** the GitHub source only reads files named `pt.json` or `en.json`, at any depth of each repository in `MCP_GITHUB_REPOS`, and searches the string values inside them. Repositories without those files return no results and no error.
+-   **GitHub file format:** the GitHub source only reads JSON files whose names are listed in `MCP_GITHUB_FILENAMES` (default `pt.json` and `en.json`), at any depth of each repository in `MCP_GITHUB_REPOS`, and searches the string values inside them. CSV, Markdown and other formats are not supported. Repositories without matching files return no results and no error.
 -   **WordPress:** the site's REST API (`/wp-json/wp/v2/posts`) must be publicly readable.
 
 ---
@@ -109,10 +110,10 @@ Check every item before exposing your instance.
 
 -   [ ] **1. Run a current release.** Use `0.13.1` or later: earlier releases do not require a valid `tier` claim on every token.
 -   [ ] **2. Bind locally to `127.0.0.1`.** Never run the server with `--host 0.0.0.0` on your machine; that value belongs only in the `Dockerfile`.
--   [ ] **3. Revoke users completely.** When someone leaves, follow the [three-step revocation](deployment-guide.md#52-revoking-a-user) instead of only editing `allowed_users`.
+-   [ ] **3. Revoke users completely.** When someone leaves, follow the [three-step revocation](deployment-guide.md#52-revoking-a-user) instead of only editing `allowed_users`. `scripts/revoke_user.py` runs all three steps.
 -   [ ] **4. Disable sign-up and keep Google as the only provider.** Disabling sign-up also blocks the first Google login of allow-listed users who have never signed in, so disable it after each user's first login and re-enable it briefly when onboarding someone new ([deployment guide, section 3.1](deployment-guide.md#31-disabling-self-registration)).
 -   [ ] **5. Restrict the Firebase API key** to your portal's domains (HTTP referrers) and to the `identitytoolkit` and `securetoken` APIs only.
--   [ ] **6. Deploy Firestore rules that deny all client access** (`allow read, write: if false;`). The server uses the Admin SDK, which these rules do not affect.
+-   [ ] **6. Deploy Firestore rules that deny all client access:** publish the repository's `firestore.rules` ([deployment guide, section 4](deployment-guide.md#4-understanding-the-non-secret-nature-of-firebase-configurations)). The server uses the Admin SDK, which these rules do not affect.
 -   [ ] **7. Use least privilege.** A dedicated runtime service account (`jor-mcp-runner`), impersonation instead of JSON keys on developer machines, and a fine-grained GitHub token with `Contents: read` only, limited to the repositories in `MCP_GITHUB_REPOS`, expiring in 90 days or less.
 -   [ ] **8. Index only what every user may read.** Every allow-listed user, and the AI provider behind their client, can read everything in the configured repositories. Record this decision.
 -   [ ] **9. Configure TTL and HTTPS.** Firestore TTL policies on `oauth_codes.expires_at` and `ip_rate_limits.expires_at`, and HTTPS on every public URL.

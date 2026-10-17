@@ -52,6 +52,12 @@ spec:
               value: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
             - name: FIREBASE_WEB_API_KEY
               value: "${FIREBASE_WEB_API_KEY}"
+            - name: OAUTH_SERVER_BASE_URL
+              value: "${OAUTH_SERVER_BASE_URL}"
+            - name: OAUTH_PORTAL_BASE_URL
+              value: "${OAUTH_PORTAL_BASE_URL}"
+            - name: CORS_ALLOWED_ORIGINS
+              value: "${CORS_ALLOWED_ORIGINS}"
 
             # ── Secrets via Secret Manager ───────────────────────────────────
             - name: MCP_GITHUB_TOKEN

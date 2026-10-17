@@ -165,7 +165,7 @@ No Firebase, a `apiKey` atua como um **identificador público do projeto**, e n�
 ### Como Proteger o Seu Sistema
 A segurança do seu app **não depende** de ocultar a `apiKey`. Em vez disso, reforce-a através de:
 1.  **Restrições da API Key no GCP:** No Console do Google Cloud, navegue até **APIs e Serviços > Credenciais**, localize a API Key do Firebase e configure restrições de uso para aceitar conexões apenas a partir do domínio oficial do seu portal (ex: `https://jormcp.ambiental.media`).
-2.  **Regras de Segurança do Firestore (Security Rules):** Garanta que o seu banco de dados NoSQL esteja devidamente travado para que clientes consigam ler/escrever apenas nos diretórios que possuem permissão explícita. Por exemplo, recuse acesso geral de gravação para as coleções `allowed_users` ou `oauth_clients`.
+2.  **Regras de Segurança do Firestore (Security Rules):** Garanta que o seu banco de dados NoSQL esteja travado. Os clientes nunca precisam de acesso direto, porque o servidor usa o Admin SDK, que ignora as regras. O repositório traz o `firestore.rules`, que nega toda requisição de cliente: no **Console do Firebase**, abra **Firestore Database > Rules**, cole o conteúdo do arquivo e clique em **Publish**. Com o Firebase CLI, aponte o `firebase.json` para o arquivo e rode `firebase deploy --only firestore:rules`. Um banco nomeado (`FIRESTORE_DATABASE_ID`) tem regras próprias e precisa da mesma publicação.
 
 ---
 
@@ -191,7 +191,14 @@ Quando alguém precisa perder o acesso (por exemplo, ao sair da redação), conc
 2.  **Claim de role:** remova a custom claim `tier` da conta dela no Firebase.
 3.  **Sessões:** revogue os refresh tokens dela.
 
-Os passos 2 e 3 usam o Firebase Admin SDK, executado com credenciais que tenham `roles/firebaseauth.admin`:
+O `scripts/revoke_user.py` executa os três passos. Use credenciais que tenham `roles/datastore.user` e `roles/firebaseauth.admin`, e o mesmo `.env` do servidor:
+
+```bash
+uv run --env-file .env python scripts/revoke_user.py usuario@dominio.com --dry-run
+uv run --env-file .env python scripts/revoke_user.py usuario@dominio.com
+```
+
+Para fazer os passos 2 e 3 à mão, use o Firebase Admin SDK:
 
 ```python
 import firebase_admin
@@ -203,7 +210,7 @@ auth.set_custom_user_claims(user.uid, None)
 auth.revoke_refresh_tokens(user.uid)
 ```
 
-Um ID token emitido antes da revogação continua válido até expirar (no máximo uma hora). Um script `scripts/revoke_user.py` que executa os três passos está planejado.
+Um ID token emitido antes da revogação continua válido até expirar (no máximo uma hora).
 
 ---
 
@@ -238,6 +245,8 @@ Para habilitar os workflows de implantação no seu repositório, navegue até *
 | `GCP_SA_KEY` | Chave JSON de uma Conta de Serviço do GCP com permissões para gravar no Artifact Registry e implantar no Cloud Run. | *(Obrigatório)* |
 | `GCP_PROJECT_ID` | O ID do seu projeto no Google Cloud. | `meu-projeto-mcp-123` |
 | `GCP_PROJECT_NUMBER` | O número do seu projeto no Google Cloud (usado nas anotações do serviço Knative). | `123456789012` |
+
+O workflow de CD também lê **variáveis** do repositório (mesma página, aba **Variables**): `FIREBASE_PROJECT_ID`, `WORDPRESS_API_URL`, `MCP_GITHUB_REPOS`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `FIREBASE_WEB_API_KEY`, `OAUTH_SERVER_BASE_URL`, `OAUTH_PORTAL_BASE_URL` e `CORS_ALLOWED_ORIGINS`. O deploy é interrompido se alguma das três últimas estiver vazia: um valor vazio substituiria o padrão e quebraria o login OAuth.
 
 ### 8.2 Workflows Disponíveis
 Nosso repositório contém workflows pré-configurados que você pode adaptar:
@@ -307,8 +316,12 @@ export WORDPRESS_API_URL="..."
 export MCP_GITHUB_REPOS="..."
 export OTEL_EXPORTER_OTLP_ENDPOINT="..."
 export FIREBASE_WEB_API_KEY="..."
+export OAUTH_SERVER_BASE_URL="https://<seu-dominio>"
+export OAUTH_PORTAL_BASE_URL="https://<seu-dominio>"
+export CORS_ALLOWED_ORIGINS="https://<seu-dominio>"
 
-for v in IMAGE_URL GCP_PROJECT_NUMBER GCP_PROJECT_ID; do
+for v in IMAGE_URL GCP_PROJECT_NUMBER GCP_PROJECT_ID \
+         OAUTH_SERVER_BASE_URL OAUTH_PORTAL_BASE_URL CORS_ALLOWED_ORIGINS; do
   : "${!v:?defina $v antes de executar o envsubst}"
 done
 

@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from src.config import parse_github_filenames
 from src.services.github import (
     GitHubFileResult,
     _build_auth_headers,
@@ -238,6 +239,17 @@ async def test_discover_i18n_paths_returns_matching_files(mock_client: AsyncMock
 
 
 @pytest.mark.asyncio
+async def test_discover_i18n_paths_uses_configured_filenames(mock_client: AsyncMock) -> None:
+    """MCP_GITHUB_FILENAMES replaces the default pt.json/en.json names."""
+    mock_client.get.return_value = _make_response(
+        200, _tree_response(["data/data.json", "messages/pt.json"])
+    )
+    with patch("src.services.github.GITHUB_FILENAMES", frozenset({"data.json"})):
+        paths = await _discover_i18n_paths(mock_client, _REPO)
+    assert paths == ["data/data.json"]
+
+
+@pytest.mark.asyncio
 async def test_discover_i18n_paths_http_error_returns_empty(mock_client: AsyncMock) -> None:
     mock_client.get.return_value = _make_response(403)
     paths = await _discover_i18n_paths(mock_client, _REPO)
@@ -324,6 +336,23 @@ async def test_fetch_github_i18n_content_empty_repos(mock_client: AsyncMock) -> 
 
 
 @pytest.mark.asyncio
+async def test_fetch_github_i18n_content_no_filenames(
+    mock_client: AsyncMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An MCP_GITHUB_FILENAMES with no .json names skips ingestion with a warning."""
+    with (
+        patch("src.services.github.GITHUB_REPOS", _REPO),
+        patch("src.services.github.GITHUB_FILENAMES", frozenset()),
+        caplog.at_level(logging.WARNING, logger="src.services.github"),
+    ):
+        result = await fetch_github_i18n_content()
+    assert result == []
+    mock_client.get.assert_not_called()
+    assert any("MCP_GITHUB_FILENAMES" in r.message for r in caplog.records)
+
+
+@pytest.mark.asyncio
 async def test_fetch_github_i18n_content_success(mock_client: AsyncMock) -> None:
     mock_client.get.return_value = _make_response(200, _content_response(_PATH))
     with (
@@ -403,3 +432,22 @@ async def test_fetch_github_i18n_content_survives_unexpected_task_error(
         result = await fetch_github_i18n_content()
 
     assert result == []
+
+
+# ---------------------------------------------------------------------------
+# parse_github_filenames (src.config)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("pt.json,en.json", {"pt.json", "en.json"}),
+        (" data.json , pt.json ,", {"data.json", "pt.json"}),
+        ("data.csv,notes.md,data.json", {"data.json"}),
+        ("", set()),
+    ],
+)
+def test_parse_github_filenames(raw: str, expected: set[str]) -> None:
+    """Names are trimmed, blanks dropped and only .json names kept."""
+    assert parse_github_filenames(raw) == frozenset(expected)

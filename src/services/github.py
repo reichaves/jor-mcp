@@ -22,14 +22,10 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from src.config import GITHUB_API_BASE_URL, GITHUB_REPOS, GITHUB_TOKEN
+from src.config import GITHUB_API_BASE_URL, GITHUB_FILENAMES, GITHUB_REPOS, GITHUB_TOKEN
 from src.http_client import get_http_client
 
 logger = logging.getLogger(__name__)
-
-# Filenames that identify i18n content, matched against any depth in the tree.
-_I18N_FILENAMES: frozenset[str] = frozenset({"pt.json", "en.json"})
-
 
 # ---------------------------------------------------------------------------
 # Pydantic models
@@ -247,7 +243,7 @@ async def _discover_i18n_paths(
     return [
         item.path
         for item in payload.tree
-        if item.type == "blob" and Path(item.path).name in _I18N_FILENAMES
+        if item.type == "blob" and Path(item.path).name in GITHUB_FILENAMES
     ]
 
 
@@ -305,6 +301,9 @@ async def fetch_github_i18n_content() -> list[dict[str, Any]]:
     """
     if not GITHUB_REPOS.strip():
         logger.warning("GITHUB_REPOS is not configured; skipping GitHub ingestion")
+        return []
+    if not GITHUB_FILENAMES:
+        logger.warning("MCP_GITHUB_FILENAMES has no .json file names; skipping GitHub ingestion")
         return []
 
     repos = [r.strip() for r in GITHUB_REPOS.split(",") if r.strip()]
