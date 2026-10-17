@@ -61,8 +61,11 @@ otherwise let anyone flood Firestore through `POST /api/oauth/register`.
 ### 2.3 External Content Source Configurations
 -   `WORDPRESS_API_URL` (Default: `"https://ambiental.media/wp-json"`; **required outside Ambiental Media**): Base URL of the target WordPress CMS API.
 -   `MCP_GITHUB_TOKEN` (Optional for public repos, recommended): Personal Access Token to authenticate against GitHub API.
--   `MCP_GITHUB_REPOS` (Default: empty, which disables the GitHub source): Comma-separated list of target GitHub repositories to search (in `owner/repo` format). Only files named in `MCP_GITHUB_FILENAMES` are read.
--   `MCP_GITHUB_FILENAMES` (Default: `"pt.json,en.json"`): Comma-separated file names searched in each repository, matched at any depth. Only `.json` names are kept, because the GitHub source decodes each file as JSON and searches its string values.
+-   `MCP_GITHUB_REPOS` (Default: empty, which disables the GitHub source): Comma-separated list of target GitHub repositories to search (in `owner/repo` format). Only files matching `MCP_GITHUB_FILENAMES` are read.
+-   `MCP_GITHUB_FILENAMES` (Default: `"pt.json,en.json"`): Comma-separated file-name patterns searched in each repository, matched against the file name at any depth: exact names (`pt.json`) or `fnmatch` patterns (`*.csv`, `dados-*.json`). Supported extensions: `.json`, `.csv`, `.md` and `.markdown`; other entries are dropped. See [GitHub Integration](../1-technical/integrations/github.md) for how each format is searched.
+-   `MCP_GITHUB_MAX_FILE_BYTES` (Default: `"1000000"`): Largest file fetched, in bytes; larger matches are skipped with a warning. 1 MB is the Contents API limit.
+-   `MCP_GITHUB_MAX_FILES_PER_REPO` (Default: `"50"`): Most matching files fetched per repository; the rest are skipped with a warning.
+-   `MCP_GITHUB_CACHE_SECONDS` (Default: `"300"`): How long fetched GitHub content is reused before it is downloaded again. `0` disables the cache. Each Cloud Run instance keeps its own.
 -   `MCP_GITHUB_API_BASE_URL` (Default: `"https://api.github.com"`): Base API endpoint for GitHub REST calls.
 
 ### 2.4 Diagnostics & Telemetry

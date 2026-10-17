@@ -75,7 +75,7 @@ Vários valores padrão apontam para a Ambiental Media. Se você não os definir
 | `FIREBASE_SERVICE_ACCOUNT_ID` | Não definir | **Obrigatória** com impersonação |
 | `WORDPRESS_API_URL` | **Obrigatória** (o padrão é a Ambiental Media) | **Obrigatória** (o padrão é a Ambiental Media) |
 | `MCP_GITHUB_REPOS` / `MCP_GITHUB_TOKEN` | Opcional | Opcional |
-| `MCP_GITHUB_FILENAMES` | Opcional (padrão `pt.json,en.json`) | Opcional (padrão `pt.json,en.json`) |
+| `MCP_GITHUB_FILENAMES` | Opcional (padrão `pt.json,en.json`; ex.: `*.json,*.csv,*.md`) | Opcional (igual) |
 | `OAUTH_SERVER_BASE_URL` | **Obrigatória**: `https://<seu-dominio>` | **Obrigatória**: `http://localhost:8080` |
 | `OAUTH_PORTAL_BASE_URL` | **Obrigatória**: a URL do seu portal | **Obrigatória**: `http://localhost:3000` |
 | `CORS_ALLOWED_ORIGINS` | **Obrigatória**: a origem do seu portal | O padrão já libera `http://localhost:3000` |
@@ -101,7 +101,7 @@ Vários valores padrão apontam para a Ambiental Media. Se você não os definir
 ## 4. Limitações Conhecidas
 
 -   **Portal de consentimento:** o portal de produção (`jor-mcp-site`) é um repositório privado. Para concluir o login na sua instância, você precisa de um portal que implemente a etapa de consentimento descrita em [Contratos da API](../1-tecnico/contratos-api.md). Use o [portal de referência](#5-portal-de-consentimento-de-referência) ou crie o seu.
--   **Formato dos arquivos do GitHub:** a fonte GitHub só lê arquivos JSON cujos nomes estejam em `MCP_GITHUB_FILENAMES` (padrão `pt.json` e `en.json`), em qualquer nível de cada repositório de `MCP_GITHUB_REPOS`, e pesquisa os valores de texto dentro deles. CSV, Markdown e outros formatos não são aceitos. Repositórios sem arquivos correspondentes não retornam resultados nem erro.
+-   **Formatos dos arquivos do GitHub:** a fonte GitHub lê arquivos JSON, CSV e Markdown cujos nomes correspondam a `MCP_GITHUB_FILENAMES` (padrão `pt.json` e `en.json`), em qualquer nível de cada repositório de `MCP_GITHUB_REPOS`, até 1 MB por arquivo e 50 arquivos por repositório. Outros formatos, como planilhas, PDFs ou imagens, não são lidos. Veja [Integração GitHub](../1-tecnico/integracoes/github.md).
 -   **WordPress:** a REST API do site (`/wp-json/wp/v2/posts`) precisa permitir leitura pública.
 
 ---
@@ -160,6 +160,6 @@ Confira todos os itens antes de expor a sua instância.
 -   [ ] **5. Restrinja a API key do Firebase** aos domínios do seu portal (HTTP referrers) e só às APIs `identitytoolkit` e `securetoken`.
 -   [ ] **6. Publique regras do Firestore que neguem todo acesso de clientes:** publique o `firestore.rules` do repositório ([guia de implantação, seção 4](guia-de-implantacao.md#4-compreendendo-o-caráter-não-secreto-das-chaves-do-firebase)). O servidor usa o Admin SDK, que não é afetado por essas regras.
 -   [ ] **7. Use o mínimo de permissões.** Uma conta de serviço de execução dedicada (`jor-mcp-runner`), impersonação em vez de chaves JSON nas máquinas de desenvolvimento, e um token fine-grained do GitHub só com `Contents: read`, limitado aos repositórios de `MCP_GITHUB_REPOS`, com validade de até 90 dias.
--   [ ] **8. Indexe só o que todos os usuários podem ler.** Todo usuário da allow-list, e o provedor de IA por trás do cliente dele, consegue ler tudo nos repositórios configurados. Registre essa decisão.
+-   [ ] **8. Indexe só o que todos os usuários podem ler.** Todo usuário da allow-list, e o provedor de IA por trás do cliente dele, consegue ler tudo nos repositórios configurados, inclusive os privados. Registre essa decisão e indexe só repositórios em que você confia como fonte editorial: o texto deles chega ao modelo como conteúdo.
 -   [ ] **9. Configure TTL e HTTPS.** Políticas de TTL do Firestore em `oauth_codes.expires_at` e `ip_rate_limits.expires_at`, e HTTPS em toda URL pública.
 -   [ ] **10. Faça deploy sem chaves de longa duração.** Prefira [Workload Identity Federation](guia-de-implantacao.md#83-autenticação-sem-chave-com-workload-identity-federation) ao segredo `GCP_SA_KEY` no GitHub Actions.

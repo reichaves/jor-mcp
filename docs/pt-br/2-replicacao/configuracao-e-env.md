@@ -61,8 +61,11 @@ de outra forma permitiria a qualquer pessoa inundar o Firestore via `POST /api/o
 ### 2.3 Configurações de Fontes de Conteúdo Externas
 -   `WORDPRESS_API_URL` (Padrão: `"https://ambiental.media/wp-json"`; **obrigatória fora da Ambiental Media**): URL base da API do CMS WordPress de destino.
 -   `MCP_GITHUB_TOKEN` (Opcional para repositórios públicos, recomendado): Token de Acesso Pessoal (PAT) para autenticação na API do GitHub.
--   `MCP_GITHUB_REPOS` (Padrão: vazio, o que desliga a fonte GitHub): Lista de repositórios do GitHub separados por vírgula (no formato `proprietario/repositorio`). Só são lidos os arquivos citados em `MCP_GITHUB_FILENAMES`.
--   `MCP_GITHUB_FILENAMES` (Padrão: `"pt.json,en.json"`): Nomes de arquivo, separados por vírgula, pesquisados em cada repositório, em qualquer nível. Só nomes terminados em `.json` são mantidos, porque a fonte GitHub decodifica cada arquivo como JSON e pesquisa os valores de texto dentro dele.
+-   `MCP_GITHUB_REPOS` (Padrão: vazio, o que desliga a fonte GitHub): Lista de repositórios do GitHub separados por vírgula (no formato `proprietario/repositorio`). Só são lidos os arquivos que correspondem a `MCP_GITHUB_FILENAMES`.
+-   `MCP_GITHUB_FILENAMES` (Padrão: `"pt.json,en.json"`): Padrões de nome de arquivo, separados por vírgula, pesquisados em cada repositório e comparados com o nome do arquivo em qualquer nível: nomes exatos (`pt.json`) ou padrões `fnmatch` (`*.csv`, `dados-*.json`). Extensões aceitas: `.json`, `.csv`, `.md` e `.markdown`; as outras entradas são descartadas. Veja [Integração GitHub](../1-tecnico/integracoes/github.md) para saber como cada formato é pesquisado.
+-   `MCP_GITHUB_MAX_FILE_BYTES` (Padrão: `"1000000"`): Maior arquivo baixado, em bytes; arquivos maiores são ignorados com um aviso. 1 MB é o limite da Contents API.
+-   `MCP_GITHUB_MAX_FILES_PER_REPO` (Padrão: `"50"`): Número máximo de arquivos baixados por repositório; os demais são ignorados com um aviso.
+-   `MCP_GITHUB_CACHE_SECONDS` (Padrão: `"300"`): Por quanto tempo o conteúdo baixado do GitHub é reaproveitado antes de ser baixado de novo. `0` desliga o cache. Cada instância do Cloud Run tem o seu.
 -   `MCP_GITHUB_API_BASE_URL` (Padrão: `"https://api.github.com"`): Endpoint da API REST do GitHub.
 
 ### 2.4 Diagnóstico e Telemetria
