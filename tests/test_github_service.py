@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from src.config import parse_github_filenames
+from src.config import parse_github_exclude, parse_github_filenames
 from src.services.github import (
     GitHubFileResult,
     _build_auth_headers,
@@ -615,3 +615,39 @@ async def test_fetch_content_does_not_cache_empty_results(mock_client: AsyncMock
         assert await fetch_github_i18n_content() == []
         assert await fetch_github_i18n_content() == []
     assert discover.await_count == 2
+
+
+# ---------------------------------------------------------------------------
+# MCP_GITHUB_EXCLUDE
+# ---------------------------------------------------------------------------
+
+
+def test_parse_github_exclude_drops_blanks() -> None:
+    assert parse_github_exclude(" .claude/* , ,CLAUDE.md,") == frozenset({".claude/*", "CLAUDE.md"})
+
+
+@pytest.mark.asyncio
+async def test_discover_skips_excluded_paths(mock_client: AsyncMock) -> None:
+    """Patterns match the full path; a pattern without '/' also matches the name anywhere."""
+    mock_client.get.return_value = _make_response(
+        200,
+        _tree_response(
+            [
+                ".claude/settings.json",  # excluded by path
+                "CLAUDE.md",  # excluded by name
+                "sub/CLAUDE.md",  # excluded by name at depth
+                "docs/drafts/a.md",  # excluded by path
+                "x/docs/drafts/b.md",  # kept: path patterns match from the repository root
+                "README.md",
+            ]
+        ),
+    )
+    with (
+        patch("src.services.github.GITHUB_FILENAMES", frozenset({"*.json", "*.md"})),
+        patch(
+            "src.services.github.GITHUB_EXCLUDE",
+            frozenset({".claude/*", "CLAUDE.md", "docs/drafts/*"}),
+        ),
+    ):
+        paths = await _discover_i18n_paths(mock_client, _REPO)
+    assert paths == ["x/docs/drafts/b.md", "README.md"]

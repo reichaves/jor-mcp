@@ -9,7 +9,7 @@
 
 ## 1. How files are found and read
 
-1.  **Discovery:** for each repository, the Git Trees API (`/repos/{owner}/{repo}/git/trees/HEAD?recursive=1`) lists every file of the default branch. A file is kept when its name matches one of the `MCP_GITHUB_FILENAMES` patterns (exact names such as `pt.json` or `fnmatch` patterns such as `*.csv`), at any depth. Matching is case-sensitive: `*.md` does not match `README.MD`.
+1.  **Discovery:** for each repository, the Git Trees API (`/repos/{owner}/{repo}/git/trees/HEAD?recursive=1`) lists every file of the default branch. A file is kept when its name matches one of the `MCP_GITHUB_FILENAMES` patterns (exact names such as `pt.json` or `fnmatch` patterns such as `*.csv`), at any depth. Matching is case-sensitive: `*.md` does not match `README.MD`. Files matching an `MCP_GITHUB_EXCLUDE` pattern are left out (for example `.claude/*,CLAUDE.md` to skip AI-agent configuration).
 2.  **Limits:** files larger than `MCP_GITHUB_MAX_FILE_BYTES` (default 1 MB, the Contents API limit) are skipped, and at most `MCP_GITHUB_MAX_FILES_PER_REPO` (default 50) are kept per repository. Both log a warning with the repository and path, never the content.
 3.  **Download:** each file is fetched through the Contents API and decoded from Base64.
 4.  **Parsing by extension:**
@@ -24,7 +24,7 @@ Files that cannot be parsed (invalid JSON, a CSV without a header, a JSON scalar
 
 ## 2. Search and results
 
-The query is matched in memory, ignoring case and accents. Each matching file becomes one result with `source: github:<owner>/<repo>`, a short excerpt around the first match and a link to the file on GitHub. Links to private repositories only open for people who can read them on GitHub.
+The query is matched in memory, ignoring case and accents. Each matching file becomes one result with `source: github:<owner>/<repo>`, a short excerpt around the first match and a link to the file on GitHub. Files are ranked by how many times the query appears in them, and at most `MCP_GITHUB_MAX_RESULTS` (default 10) are returned; when more match, a final `notice` item states the total so the model can refine the search. Links to private repositories only open for people who can read them on GitHub.
 
 ## 3. Cache
 

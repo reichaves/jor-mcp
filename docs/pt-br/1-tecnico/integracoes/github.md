@@ -9,7 +9,7 @@ O `search_content` pesquisa os repositórios do GitHub listados em `MCP_GITHUB_R
 
 ## 1. Como os arquivos são encontrados e lidos
 
-1.  **Descoberta:** em cada repositório, a Git Trees API (`/repos/{owner}/{repo}/git/trees/HEAD?recursive=1`) lista todos os arquivos da branch padrão. Um arquivo entra quando o nome corresponde a um dos padrões de `MCP_GITHUB_FILENAMES` (nomes exatos como `pt.json` ou padrões `fnmatch` como `*.csv`), em qualquer nível. A comparação diferencia maiúsculas: `*.md` não pega `README.MD`.
+1.  **Descoberta:** em cada repositório, a Git Trees API (`/repos/{owner}/{repo}/git/trees/HEAD?recursive=1`) lista todos os arquivos da branch padrão. Um arquivo entra quando o nome corresponde a um dos padrões de `MCP_GITHUB_FILENAMES` (nomes exatos como `pt.json` ou padrões `fnmatch` como `*.csv`), em qualquer nível. A comparação diferencia maiúsculas: `*.md` não pega `README.MD`. Arquivos que correspondem a um padrão de `MCP_GITHUB_EXCLUDE` ficam de fora (por exemplo `.claude/*,CLAUDE.md` para deixar de lado a configuração de agentes de IA).
 2.  **Limites:** arquivos maiores que `MCP_GITHUB_MAX_FILE_BYTES` (padrão 1 MB, o limite da Contents API) são ignorados, e no máximo `MCP_GITHUB_MAX_FILES_PER_REPO` (padrão 50) entram por repositório. Os dois registram um aviso com o repositório e o caminho, nunca com o conteúdo.
 3.  **Download:** cada arquivo é baixado pela Contents API e decodificado de Base64.
 4.  **Leitura por extensão:**
@@ -24,7 +24,7 @@ Arquivos que não podem ser lidos (JSON inválido, CSV sem cabeçalho, JSON com 
 
 ## 2. Busca e resultados
 
-A consulta é comparada em memória, sem diferenciar maiúsculas nem acentos. Cada arquivo encontrado vira um resultado com `source: github:<owner>/<repo>`, um trecho curto em torno da primeira ocorrência e um link para o arquivo no GitHub. Links de repositórios privados só abrem para quem pode lê-los no GitHub.
+A consulta é comparada em memória, sem diferenciar maiúsculas nem acentos. Cada arquivo encontrado vira um resultado com `source: github:<owner>/<repo>`, um trecho curto em torno da primeira ocorrência e um link para o arquivo no GitHub. Os arquivos são ordenados pela quantidade de ocorrências do termo, e no máximo `MCP_GITHUB_MAX_RESULTS` (padrão 10) são devolvidos; quando há mais, um último item `notice` informa o total, para que o modelo possa refinar a busca. Links de repositórios privados só abrem para quem pode lê-los no GitHub.
 
 ## 3. Cache
 

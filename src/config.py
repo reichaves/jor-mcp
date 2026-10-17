@@ -223,6 +223,33 @@ message files used by Ambiental Media's microsites.
 Environment variable: ``MCP_GITHUB_FILENAMES``.
 """
 
+
+def parse_github_exclude(raw: str) -> frozenset[str]:
+    """Parse comma-separated ``fnmatch`` exclusion patterns, dropping blanks."""
+    return frozenset(pattern.strip() for pattern in raw.split(",") if pattern.strip())
+
+
+GITHUB_EXCLUDE: frozenset[str] = parse_github_exclude(os.environ.get("MCP_GITHUB_EXCLUDE", ""))
+"""Patterns of files left out of the GitHub search even when their name matches.
+
+Comma-separated ``fnmatch`` patterns compared with the file's full path in the
+repository (``.claude/*``, ``docs/drafts/*``); a pattern without ``/`` is also
+compared with the file name at any depth (``CLAUDE.md``). Matching is
+case-sensitive and ``*`` also crosses ``/``. Empty by default.
+
+Environment variable: ``MCP_GITHUB_EXCLUDE``.
+"""
+
+GITHUB_MAX_RESULTS: int = int(os.environ.get("MCP_GITHUB_MAX_RESULTS", "10"))
+"""Most GitHub files returned by one search; ``0`` returns every match.
+
+Files are ranked by how many times the query appears before the cut, and the
+search adds a notice with the total when results are left out. Matches the
+WordPress search, which returns at most 10 posts.
+
+Environment variable: ``MCP_GITHUB_MAX_RESULTS``.
+"""
+
 GITHUB_MAX_FILE_BYTES: int = int(os.environ.get("MCP_GITHUB_MAX_FILE_BYTES", "1000000"))
 """Largest file, in bytes, fetched from GitHub; larger matches are skipped.
 
