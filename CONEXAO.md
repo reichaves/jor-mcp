@@ -26,7 +26,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A e B feitas; a Parte C aguarda os dados do usuário. PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`) e #15 (Fase 4.5, Parte B, sobre o #13). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A e B feitas; Parte C em andamento, só com o GitHub (o site indicado não é WordPress; veja a Fase 4.6). PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`) e #15 (Fase 4.5, Parte B, sobre o #13). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -502,6 +502,19 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 
 **Pendente:** a Parte C, com o site, os repositórios e o token do usuário.
 
+**Andamento da Parte C (2026-10-17):**
+- **C1:** o site indicado, `https://www.abraji.org.br/`, **não é WordPress**. `/wp-json/wp/v2/posts` responde `404` em HTML e `?rest_route=` devolve a página inicial. Não há marcas do WordPress, o servidor é Phusion Passenger com Turbolinks (provavelmente Rails), e `/feed`, `/rss` e `/sitemap.xml` redirecionam para `404.html`. O jor-mcp não consegue pesquisá-lo: o plano de um adaptador ficou na **Fase 4.6**. A Parte C segue só com o GitHub, mantendo o WordPress atual, e o item 14 da §7 fica bloqueado.
+- **C2:** repositórios `reichaves/lobbying_us`, `reichaves/anchor_journalism` e `rafaelbressan/masterzap`, **todos públicos**:
+
+  | Repositório | JSON | Markdown | CSV | Acima de 1 MB |
+  |---|---|---|---|---|
+  | `reichaves/lobbying_us` | 22 | 27 | 0 | 1 |
+  | `reichaves/anchor_journalism` | 0 | 27 | 0 | 0 |
+  | `rafaelbressan/masterzap` | 29 | 4 | 0 | 1 |
+
+  Não há CSV, então o item 15 da §7 valida JSON e Markdown no teste real, e o CSV fica coberto pelos testes automáticos (decisão do usuário). Sem repositório privado, o item 16 não pode ser testado. Mesmo com tudo público, o token é necessário na prática: a primeira busca faz cerca de 100 requisições, e o GitHub permite 60 por hora sem token. Basta um fine-grained com acesso "Public repositories (read-only)".
+- **C3:** confirmado pelo usuário: o conteúdo pode ser lido por todos da allow-list e pelo provedor de IA (R9). O `rafaelbressan/masterzap` é de terceiros e traz arquivos de conversas de pessoas nomeadas (`data/conversations/*.json`); ele fica pesquisável nas mesmas condições.
+
 **Parte C: configuração e teste real** (precisa do usuário em C1 a C4):
 1. **C1, WordPress:** o usuário informa a URL. Eu confiro, só lendo, que a REST API responde `200`.
 2. **C2, GitHub:** o usuário informa os repositórios e quais são privados, cria o token fine-grained e o grava **ele mesmo** no `.env` como `MCP_GITHUB_TOKEN`.
@@ -516,6 +529,48 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 7. **C7:** registrar os resultados aqui, atualizar o trace e abrir o PR da Parte B, empilhado sobre o #13.
 
 **Aceite da Parte C:** os itens 14 a 17 da §7 passam. **Para desfazer:** voltar o `.env` aos valores anteriores e revogar o token no GitHub.
+
+### Fase 4.6: fonte para sites sem WordPress (plano, não aprovado)
+**Objetivo:** permitir que a instância pesquise um site que não é WordPress, a começar por `https://abraji.org.br`, que a Fase 4.5 mostrou não ter REST API, RSS nem sitemap.
+
+**O que o site oferece** (observado em 2026-10-17, só leitura):
+- listagem paginada em `/noticias` e `/noticias?page=N`;
+- busca própria em `/busca?q=`, respondendo HTML;
+- matérias em `/noticias/<slug>`, com um `<article>` e o título no `<h1>`;
+- **nenhum** metadado de data (`og:`, `article:published_time` ou `datetime`) na página analisada: a data precisa ser localizada no HTML antes de implementar.
+
+**Abordagem proposta:** uma fonte "site HTML" genérica, configurada por variáveis, usando o `beautifulsoup4`, que já é dependência do projeto:
+- `MCP_HTML_SITE_BASE_URL` (ex.: `https://abraji.org.br`);
+- `MCP_HTML_SITE_LIST_PATH` (`/noticias?page={page}`);
+- `MCP_HTML_SITE_SEARCH_PATH` (`/busca?q={query}`);
+- `MCP_HTML_SITE_ARTICLE_PATTERN` (`/noticias/*`);
+- seletores CSS para título, corpo e data.
+
+As três ferramentas passariam a consultar essa fonte:
+- `list_latest_news`, pela listagem;
+- `search_content`, pela busca do site, ao lado do WordPress e do GitHub;
+- `get_full_article`, escolhendo a fonte pelo domínio da URL.
+
+O WordPress continua opcional: uma instância pode ter uma fonte, a outra ou as duas.
+
+**Segurança:**
+
+| Risco | Medida |
+|---|---|
+| SSRF: o servidor buscar endereços arbitrários | Só o domínio de `MCP_HTML_SITE_BASE_URL`; links de outros domínios são ignorados; sem seguir redirecionamentos para fora dele |
+| S10: HTML de terceiros com instruções escondidas | Extrair só o texto dos seletores configurados; o conteúdo continua sendo tratado como algo a citar |
+| Sobrecarga do site e termos de uso | Respeitar o `robots.txt`, identificar-se com um User-Agent próprio, usar cache e um limite de requisições; **pedir autorização ao responsável pelo site** antes de usar em produção |
+| Fragilidade: o HTML muda sem aviso | Testes com páginas salvas (fixtures) e aviso no log quando os seletores não encontram nada |
+
+**Passos:**
+1. Confirmar com o responsável pelo `abraji.org.br` a autorização e, se possível, pedir um feed ou uma API, o que dispensaria a raspagem.
+2. Mapear o HTML real: os seletores de título, corpo e data, a paginação e o formato da busca.
+3. Implementar `src/services/html_site.py`, as variáveis em `src/config.py` e o roteamento por domínio no `get_full_article` (`src/tools.py`), com testes a partir de páginas salvas.
+4. Documentar (en, pt-br) e testar de ponta a ponta pelo Claude Code.
+
+**Aceite:** as três ferramentas funcionam com o `abraji.org.br`; `make check` sem erros; nenhuma requisição sai do domínio configurado. **Para desfazer:** deixar as variáveis vazias, o que desliga a fonte.
+
+**Decisões pendentes:** a autorização do site; se a fonte HTML substitui ou complementa o WordPress; e se a Fase 4.6 entra antes ou depois da Fase 5.
 
 ### Fase 5: contribuição com o original (opcional)
 - Abrir um PR em `ambiental-media/jor-mcp` com as Fases 1 e 2 e, se a Ambiental quiser, a Fase 3, seguindo o `.github/PULL_REQUEST_TEMPLATE.md` e o `make check`.
@@ -552,10 +607,11 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 | 11 | Portal (R13 e R14) | `client_name` com `<img onerror>`; `redirect_uri` de outro domínio | Texto aparece literal; alerta de domínio visível |
 | 12 | Regras do Firestore (R6) | `curl` no Firestore só com a apiKey | `403` |
 | 13 | Ponta a ponta | Fase 4, passos 3 a 5 | As três ferramentas respondem com dados do WordPress configurado |
-| 14 | Outro WordPress (Fase 4.5) | `list_latest_news` e `get_full_article` pelo Claude Code | Matérias do novo site; o aviso de inicialização não lista mais `WORDPRESS_API_URL` |
+| 14 | Outro WordPress (Fase 4.5; bloqueado: o site indicado não é WordPress) | `list_latest_news` e `get_full_article` pelo Claude Code | Matérias do novo site; o aviso de inicialização não lista mais `WORDPRESS_API_URL` |
 | 15 | Formatos (Fase 4.5) | `search_content` com um termo presente num JSON, num CSV e num Markdown | Um resultado `source: github:<repo>` de cada formato |
 | 16 | Repositório privado (Fase 4.5) | Mesma busca num repositório privado, com o token fine-grained | Resultado do repositório privado; sem token, nenhum resultado dele |
 | 17 | Cache (Fase 4.5) | Duas buscas seguidas | A segunda não faz novas chamadas ao GitHub, conforme o log |
+| 18 | Site sem WordPress (Fase 4.6) | As três ferramentas com `abraji.org.br` | Resultados do site; nenhuma requisição fora do domínio configurado |
 
 ---
 
