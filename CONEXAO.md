@@ -26,7 +26,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. PRs no fork: #8 (sincronização), #9 (este plano), #10, #11, #12 e #13 (Fases 1 a 4, empilhados nessa ordem). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A e B feitas; a Parte C aguarda os dados do usuário. PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`) e #15 (Fase 4.5, Parte B, sobre o #13). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -331,7 +331,7 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 | 3 | Feito. `scripts/revoke_user.py <email> [--dry-run]`, com o e-mail em minúsculas como no servidor; se não houver conta no Firebase, só informa. 4 testes em `tests/test_revoke_user.py` |
 | 4 | Feito. `firestore.rules` nega todo acesso de clientes. O guia de implantação (§4, item 2) explica a publicação pelo console ou pelo CLI e lembra que um banco nomeado tem regras próprias |
 | 5 | Feito. `OAUTH_SERVER_BASE_URL`, `OAUTH_PORTAL_BASE_URL` e `CORS_ALLOWED_ORIGINS` no `service.yaml`, vindos de variáveis do repositório no `cd.yml`. O deploy é interrompido se alguma estiver vazia, porque um valor vazio substitui o padrão em vez de cair nele. **Efeito:** quem usa o `cd.yml`, inclusive a Ambiental se a mudança for proposta na Fase 5, precisa criar essas três variáveis antes do próximo deploy |
-| 6 | **Não feito.** O R16 continua dependendo da decisão 2 da §8 |
+| 6 | **Feito localmente, depois da Fase 4** (branch `feat/r16-redirect-host-allowlist`, commit `c50d5da`, sem push). `OAUTH_ALLOWED_REDIRECT_HOSTS` com padrão `claude.ai`; loopback sempre aceito; outros hosts só por HTTPS e na lista; recusas registradas com os hosts. 6 testes. No teste pelo túnel, o callback do claude.ai foi aceito. O PR sai depois do aviso privado à Ambiental, junto com a Fase 5 |
 
 **Aceite conferido:**
 - **Código:** lint, formatação e tipos sem erros; 345 testes passando (eram 331), cobertura de 100%.
@@ -416,7 +416,7 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 | 4 | Feito. **O endereço é `/mcp`**; `GET /mcp/sse` com token válido responde `404`. Guias corrigidos |
 | 5 | Feito. `initialize`, `tools/list` e as três ferramentas (`list_latest_news`, `search_content`, `get_full_article`) responderam com conteúdo real. Depois, pelo **Claude Code** (`claude mcp add --transport http jor-mcp-local http://localhost:8080/mcp`, autenticação pelo `/mcp`), `list_latest_news` respondeu dentro da sessão |
 | 6 | Feito. Cadastro desativado pelo usuário (`disabledUserSignup: true`) e novo login com `200`. Ressalva: a configuração do Firebase não registra a hora da mudança, então a ordem (cadastro fechado antes do login) segue o combinado, sem prova nos registros |
-| 7 | Não feito (opcional) |
+| 7 | Feito depois, com `cloudflared` (túnel temporário `trycloudflare.com`, só para a porta 8080). O servidor ficou público pelo túnel e o portal continuou em `localhost:3000`. O **claude.ai** registrou o cliente com `redirect_uri` `https://claude.ai/api/mcp/auth_callback`, trocou o código pelos servidores da Anthropic e chamou `list_latest_news`. O túnel foi desligado em seguida (R11); o endereço passou a responder `530` |
 
 **Testes da §7 feitos nesta fase:**
 - **Item 10:** com `redirect_uri=https://evil.example/cb` e um cliente registrado para loopback, o `/approve` respondeu `400`, nenhum código foi emitido e o portal mostrou "The authorization request is invalid" sem redirecionar.
@@ -484,6 +484,24 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 
 **Aceite da Parte B:** `make check-lint check-format check-types check-tests check-sast` sem erros, cobertura de 90% ou mais, Bandit sem achados novos, `make check-portal` passando e 0 links quebrados. **Para desfazer:** reverter o commit; o padrão `pt.json,en.json` mantém o comportamento anterior.
 
+**Resultado da Parte B (2026-10-17):** commit `9846e85`, na branch `feat/phase45-github-formats`, criada a partir de `fix/phase4-e2e-local`. PR #15, com base no #13.
+
+| Item | Situação |
+|---|---|
+| 1 | Feito. `parse_github_filenames` aceita padrões `fnmatch` e mantém só `.json`, `.csv`, `.md` e `.markdown` (`GITHUB_FILE_EXTENSIONS`); `_matches_patterns` usa `fnmatchcase`, que diferencia maiúsculas. O padrão `pt.json,en.json` não mudou |
+| 2 | Feito. `_parse_content`: JSON com objeto ou lista na raiz (um valor simples é recusado), CSV com cabeçalho obrigatório, Markdown como `{"text": ...}`. `GitHubFileResult.data` aceita `dict` ou `list`. O ramo de validação que só existia para recusar listas foi removido |
+| 3 | Feito. `MCP_GITHUB_MAX_FILE_BYTES` (1 MB) usa o `size` da árvore; `MCP_GITHUB_MAX_FILES_PER_REPO` (50). Os avisos citam repositório, caminho e contagens, nunca o conteúdo |
+| 4 | Feito. Cache de 300 s (`MCP_GITHUB_CACHE_SECONDS`; `0` desliga) com `asyncio.Lock`; resultados vazios não são guardados; logs "Fetched GitHub content" e "Served GitHub content from cache" para conferir no teste real |
+| 5 | Feito. As descrições falam em JSON, CSV e Markdown, e a de `search_content` pede ao modelo que trate o texto como conteúdo a citar, nunca como instrução (S10) |
+| 6 | Feito. 16 testes novos: padrões e extensões, JSON com lista e com valor simples, CSV com e sem cabeçalho, Markdown, caminho codificado, limites, cache (acerto, expiração, `0`, vazio) e uma busca que encontra uma célula de CSV e um trecho de Markdown |
+| 7 | Feito, em inglês e português. A página `integrations/github` deixou de ser um texto provisório e passou a descrever descoberta, leitura, busca, cache e acesso. Variáveis novas, limitação de formatos e item 8 do checklist atualizados |
+
+**Correção extra:** o caminho do arquivo agora é codificado na URL da Contents API (`quote`), então nomes com espaço ou acento deixam de quebrar a busca.
+
+**Aceite conferido:** lint, formatação e tipos sem erros; 363 testes, cobertura de 100%; Bandit sem achados; portal 23 testes; 0 links quebrados. Um teste do cache substituía `time.monotonic` no módulo `time` inteiro e quebrava o asyncio; foi corrigido antes do commit, com o serviço importando `monotonic` diretamente.
+
+**Pendente:** a Parte C, com o site, os repositórios e o token do usuário.
+
 **Parte C: configuração e teste real** (precisa do usuário em C1 a C4):
 1. **C1, WordPress:** o usuário informa a URL. Eu confiro, só lendo, que a REST API responde `200`.
 2. **C2, GitHub:** o usuário informa os repositórios e quais são privados, cria o token fine-grained e o grava **ele mesmo** no `.env` como `MCP_GITHUB_TOKEN`.
@@ -544,7 +562,7 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 ## 8. Decisões pendentes (suas)
 
 1. **Portal:** fazer o de referência (Fase 3) ou pedir à Ambiental acesso ao `jor-mcp-site`?
-2. **R16** (lista de domínios no `/register`): implementar aqui ou só propor à Ambiental?
+2. **R16** (lista de domínios no `/register`): **decidido:** implementado aqui, com o PR depois do aviso privado à Ambiental.
 3. **Fase 5:** contribuir com o original? Se sim, comunicar S3 e S4 em privado primeiro.
 4. **Faturamento:** o cenário B exige faturamento no GCP (Cloud Run e Load Balancer). O cenário C não exige.
 5. **Fase 0:** decidir se a branch `chore/sync-upstream-0.13.1` vai para `main` por PR no fork.
