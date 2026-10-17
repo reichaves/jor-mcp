@@ -30,7 +30,7 @@ O Jor-MCP foi projetado como uma plataforma totalmente serverless no **Google Cl
 Configure estas variáveis nas configurações de ambiente do seu serviço Cloud Run ou nos arquivos `.env` locais.
 
 > [!IMPORTANT]
-> As variáveis marcadas como **obrigatórias fora da Ambiental Media** têm como padrão as URLs da própria Ambiental Media. Em qualquer outra instância, defina todas elas: caso contrário, o servidor pesquisa o WordPress da Ambiental Media e manda os seus usuários para o portal de consentimento da Ambiental Media. Veja [Conectar os Dados da Sua Redação](conectar-sua-redacao.md#2-variáveis-obrigatórias-por-cenário) para os valores por cenário.
+> As variáveis marcadas como **obrigatórias fora da Ambiental Media** têm como padrão as URLs da própria Ambiental Media. Em qualquer outra instância, defina todas elas: caso contrário, o servidor pesquisa o WordPress da Ambiental Media e manda os seus usuários para o portal de consentimento da Ambiental Media. Fora do projeto GCP da Ambiental Media, o servidor registra um aviso na inicialização com o nome de cada uma que ainda aponte para `ambiental.media`. Veja [Conectar os Dados da Sua Redação](conectar-sua-redacao.md#2-variáveis-obrigatórias-por-cenário) para os valores por cenário.
 
 ### 2.1 Estado e Limitação de Taxa (Firestore)
 -   `FIRESTORE_DATABASE_ID` (Padrão: `"(default)"`): O ID do banco de dados Firestore. Substitua se utilizar uma instância de banco de dados nomeada.
@@ -60,7 +60,8 @@ de outra forma permitiria a qualquer pessoa inundar o Firestore via `POST /api/o
 ### 2.3 Configurações de Fontes de Conteúdo Externas
 -   `WORDPRESS_API_URL` (Padrão: `"https://ambiental.media/wp-json"`; **obrigatória fora da Ambiental Media**): URL base da API do CMS WordPress de destino.
 -   `MCP_GITHUB_TOKEN` (Opcional para repositórios públicos, recomendado): Token de Acesso Pessoal (PAT) para autenticação na API do GitHub.
--   `MCP_GITHUB_REPOS` (Padrão: vazio, o que desliga a fonte GitHub): Lista de repositórios do GitHub separados por vírgula (no formato `proprietario/repositorio`). Só são lidos arquivos chamados `pt.json` ou `en.json`.
+-   `MCP_GITHUB_REPOS` (Padrão: vazio, o que desliga a fonte GitHub): Lista de repositórios do GitHub separados por vírgula (no formato `proprietario/repositorio`). Só são lidos os arquivos citados em `MCP_GITHUB_FILENAMES`.
+-   `MCP_GITHUB_FILENAMES` (Padrão: `"pt.json,en.json"`): Nomes de arquivo, separados por vírgula, pesquisados em cada repositório, em qualquer nível. Só nomes terminados em `.json` são mantidos, porque a fonte GitHub decodifica cada arquivo como JSON e pesquisa os valores de texto dentro dele.
 -   `MCP_GITHUB_API_BASE_URL` (Padrão: `"https://api.github.com"`): Endpoint da API REST do GitHub.
 
 ### 2.4 Diagnóstico e Telemetria

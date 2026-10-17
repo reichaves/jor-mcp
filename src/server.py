@@ -2,6 +2,7 @@ import contextlib
 import logging
 import os
 from collections.abc import AsyncGenerator
+from urllib.parse import urlsplit
 
 import firebase_admin
 import httpx
@@ -24,11 +25,14 @@ from src.config import (
     HTTP_MAX_CONNECTIONS,
     HTTP_MAX_KEEPALIVE_CONNECTIONS,
     HTTP_TIMEOUT,
+    OAUTH_PORTAL_BASE_URL,
+    OAUTH_SERVER_BASE_URL,
+    WP_API_BASE_URL,
 )
 from src.middleware.auth import AuthMiddleware
 from src.middleware.ip_rate_limit import IPRateLimitMiddleware
 from src.middleware.rate_limit import RateLimitMiddleware
-from src.telemetry import instrument_asgi_app, setup_telemetry
+from src.telemetry import _resolve_gcp_project_id, instrument_asgi_app, setup_telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +64,11 @@ mcp = FastMCP(
     ),
 )
 
+# Ambiental Media's own deployment: the only one where the ambiental.media
+# defaults in src.config are expected.
+_AMBIENTAL_DOMAIN = "ambiental.media"
+_AMBIENTAL_GCP_PROJECT_ID = "jor-mcp"
+
 # Module-level reference; populated during lifespan startup.
 _firestore_client: FirestoreAsyncClient | None = None
 
@@ -73,6 +82,37 @@ def get_firestore_client() -> FirestoreAsyncClient:
     if _firestore_client is None:
         raise RuntimeError("Firestore client is not initialized")
     return _firestore_client
+
+
+def _points_to_ambiental(url: str) -> bool:
+    host = urlsplit(url).hostname or ""
+    return host == _AMBIENTAL_DOMAIN or host.endswith(f".{_AMBIENTAL_DOMAIN}")
+
+
+def _warn_on_ambiental_defaults(project_id: str) -> None:
+    """Log a warning when another newsroom's instance still points to Ambiental Media.
+
+    Several settings default to Ambiental Media's URLs. Left unset elsewhere, they
+    make the server search Ambiental Media's WordPress and send users to its
+    consent portal, with no error. Ambiental Media's own project is exempt.
+
+    Args:
+        project_id: The Google Cloud project this server runs in, or ``""``.
+    """
+    if project_id == _AMBIENTAL_GCP_PROJECT_ID:
+        return
+    settings = {
+        "WORDPRESS_API_URL": WP_API_BASE_URL,
+        "OAUTH_SERVER_BASE_URL": OAUTH_SERVER_BASE_URL,
+        "OAUTH_PORTAL_BASE_URL": OAUTH_PORTAL_BASE_URL,
+    }
+    leftover = [name for name, url in settings.items() if _points_to_ambiental(url)]
+    if leftover:
+        logger.warning(
+            "Configuration still points to Ambiental Media; set these variables "
+            "for your own instance",
+            extra={"variables": leftover, "gcp_project_id": project_id},
+        )
 
 
 async def health_check(request: Request) -> JSONResponse:
@@ -92,6 +132,7 @@ async def server_lifespan(app: Starlette) -> AsyncGenerator[None, None]:
     global _firestore_client
 
     setup_telemetry()
+    _warn_on_ambiental_defaults(_resolve_gcp_project_id())
 
     try:
         firebase_admin.get_app()

@@ -1,6 +1,8 @@
+import logging
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from starlette.testclient import TestClient
 
 
@@ -115,3 +117,96 @@ def test_get_firestore_client_returns_the_active_client(_mock_setup: MagicMock) 
         assert server_mod.get_firestore_client() is fake_firestore
     finally:
         server_mod._firestore_client = original
+
+
+# ---------------------------------------------------------------------------
+# _warn_on_ambiental_defaults
+# ---------------------------------------------------------------------------
+
+_OWN_URL = "https://mcp.example.org"
+
+
+def _patch_urls(wordpress: str, server: str, portal: str):  # type: ignore[no-untyped-def]
+    return (
+        patch("src.server.WP_API_BASE_URL", wordpress),
+        patch("src.server.OAUTH_SERVER_BASE_URL", server),
+        patch("src.server.OAUTH_PORTAL_BASE_URL", portal),
+    )
+
+
+def test_warn_on_ambiental_defaults_lists_leftover_variables(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Another project still using Ambiental Media's URLs gets one warning naming them."""
+    from src.server import _warn_on_ambiental_defaults
+
+    wp, server, portal = _patch_urls(
+        "https://ambiental.media/wp-json", _OWN_URL, "https://jormcp.ambiental.media"
+    )
+    with wp, server, portal, caplog.at_level(logging.WARNING, logger="src.server"):
+        _warn_on_ambiental_defaults("my-newsroom-project")
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert warnings[0].variables == ["WORDPRESS_API_URL", "OAUTH_PORTAL_BASE_URL"]  # type: ignore[attr-defined]
+
+
+def test_warn_on_ambiental_defaults_silent_in_ambiental_project(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Ambiental Media's own project keeps its defaults without a warning."""
+    from src.server import _warn_on_ambiental_defaults
+
+    url = "https://jormcp.ambiental.media"
+    wp, server, portal = _patch_urls(url, url, url)
+    with wp, server, portal, caplog.at_level(logging.WARNING, logger="src.server"):
+        _warn_on_ambiental_defaults("jor-mcp")
+
+    assert not caplog.records
+
+
+def test_warn_on_ambiental_defaults_silent_when_configured(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A fully configured instance, even without a known project, logs nothing.
+
+    ``notambiental.media`` only shares a suffix with the domain and must not match.
+    """
+    from src.server import _warn_on_ambiental_defaults
+
+    wp, server, portal = _patch_urls("https://notambiental.media/wp-json", _OWN_URL, _OWN_URL)
+    with wp, server, portal, caplog.at_level(logging.WARNING, logger="src.server"):
+        _warn_on_ambiental_defaults("")
+
+    assert not caplog.records
+
+
+@patch("src.server.setup_telemetry")
+@patch("src.server._resolve_gcp_project_id", return_value="my-newsroom-project")
+@patch("src.server._warn_on_ambiental_defaults")
+@patch("src.server._mcp_http_app")
+@patch("src.server.FirestoreAsyncClient")
+@patch("httpx.AsyncClient")
+async def test_server_lifespan_checks_ambiental_defaults(
+    mock_http_client_cls: MagicMock,
+    mock_firestore_cls: MagicMock,
+    mock_mcp_app: MagicMock,
+    mock_warn: MagicMock,
+    _mock_project: MagicMock,
+    _mock_setup: MagicMock,
+) -> None:
+    """server_lifespan runs the Ambiental-defaults check with the resolved project."""
+    from src.server import server_lifespan
+
+    @asynccontextmanager
+    async def fake_mcp_lifespan(app):  # type: ignore[no-untyped-def]
+        yield
+
+    mock_firestore_cls.return_value = _make_fake_firestore()
+    mock_http_client_cls.return_value = AsyncMock()
+    mock_mcp_app.lifespan = fake_mcp_lifespan
+
+    async with server_lifespan(MagicMock()):
+        pass
+
+    mock_warn.assert_called_once_with("my-newsroom-project")

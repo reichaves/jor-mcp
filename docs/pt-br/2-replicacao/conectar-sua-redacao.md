@@ -65,7 +65,7 @@ Peça à Ambiental Media para incluir a sua conta Google na allow-list e siga [C
 
 ## 2. Variáveis Obrigatórias por Cenário
 
-Vários valores padrão apontam para a Ambiental Media. Se você não os definir, a sua instância pesquisa o WordPress da Ambiental Media e manda os seus usuários para o portal de consentimento da Ambiental Media. Defina todas as variáveis marcadas como **obrigatórias** abaixo. A referência completa está em [Configuração e Variáveis de Ambiente](configuracao-e-env.md).
+Vários valores padrão apontam para a Ambiental Media. Se você não os definir, a sua instância pesquisa o WordPress da Ambiental Media e manda os seus usuários para o portal de consentimento da Ambiental Media. Defina todas as variáveis marcadas como **obrigatórias** abaixo; o servidor registra um aviso na inicialização com o nome de cada uma que ainda aponte para `ambiental.media`. A referência completa está em [Configuração e Variáveis de Ambiente](configuracao-e-env.md).
 
 | Variável | B (produção) | C (local) |
 |---|---|---|
@@ -73,6 +73,7 @@ Vários valores padrão apontam para a Ambiental Media. Se você não os definir
 | `FIREBASE_WEB_API_KEY` | **Obrigatória** | **Obrigatória** |
 | `WORDPRESS_API_URL` | **Obrigatória** (o padrão é a Ambiental Media) | **Obrigatória** (o padrão é a Ambiental Media) |
 | `MCP_GITHUB_REPOS` / `MCP_GITHUB_TOKEN` | Opcional | Opcional |
+| `MCP_GITHUB_FILENAMES` | Opcional (padrão `pt.json,en.json`) | Opcional (padrão `pt.json,en.json`) |
 | `OAUTH_SERVER_BASE_URL` | **Obrigatória**: `https://<seu-dominio>` | **Obrigatória**: `http://localhost:8080` |
 | `OAUTH_PORTAL_BASE_URL` | **Obrigatória**: a URL do seu portal | **Obrigatória**: `http://localhost:3000` |
 | `CORS_ALLOWED_ORIGINS` | **Obrigatória**: a origem do seu portal | O padrão já libera `http://localhost:3000` |
@@ -98,7 +99,7 @@ Vários valores padrão apontam para a Ambiental Media. Se você não os definir
 ## 4. Limitações Conhecidas
 
 -   **Portal de consentimento:** o portal de produção (`jor-mcp-site`) é um repositório privado. Para concluir o login na sua instância, você precisa de um portal que implemente a etapa de consentimento descrita em [Contratos da API](../1-tecnico/contratos-api.md). Um portal de referência mínimo está planejado.
--   **Formato dos arquivos do GitHub:** a fonte GitHub só lê arquivos chamados `pt.json` ou `en.json`, em qualquer nível de cada repositório de `MCP_GITHUB_REPOS`, e pesquisa os valores de texto dentro deles. Repositórios sem esses arquivos não retornam resultados nem erro.
+-   **Formato dos arquivos do GitHub:** a fonte GitHub só lê arquivos JSON cujos nomes estejam em `MCP_GITHUB_FILENAMES` (padrão `pt.json` e `en.json`), em qualquer nível de cada repositório de `MCP_GITHUB_REPOS`, e pesquisa os valores de texto dentro deles. CSV, Markdown e outros formatos não são aceitos. Repositórios sem arquivos correspondentes não retornam resultados nem erro.
 -   **WordPress:** a REST API do site (`/wp-json/wp/v2/posts`) precisa permitir leitura pública.
 
 ---
@@ -109,10 +110,10 @@ Confira todos os itens antes de expor a sua instância.
 
 -   [ ] **1. Use uma versão atual.** Use a `0.13.1` ou posterior: as versões anteriores não exigem uma claim `tier` válida em todo token.
 -   [ ] **2. Rode localmente em `127.0.0.1`.** Nunca rode o servidor com `--host 0.0.0.0` na sua máquina; esse valor fica só no `Dockerfile`.
--   [ ] **3. Revogue usuários por completo.** Quando alguém sair, siga a [revogação em três passos](guia-de-implantacao.md#52-revogando-um-usuário) em vez de só editar `allowed_users`.
+-   [ ] **3. Revogue usuários por completo.** Quando alguém sair, siga a [revogação em três passos](guia-de-implantacao.md#52-revogando-um-usuário) em vez de só editar `allowed_users`. O `scripts/revoke_user.py` executa os três passos.
 -   [ ] **4. Desative os cadastros novos e mantenha só o Google como provedor.** Desativar os cadastros também bloqueia o primeiro login com Google de usuários da allow-list que nunca entraram. Por isso, desative depois do primeiro login de cada usuário e reative por um momento ao incluir alguém novo ([guia de implantação, seção 3.1](guia-de-implantacao.md#31-desativação-de-auto-cadastro)).
 -   [ ] **5. Restrinja a API key do Firebase** aos domínios do seu portal (HTTP referrers) e só às APIs `identitytoolkit` e `securetoken`.
--   [ ] **6. Publique regras do Firestore que neguem todo acesso de clientes** (`allow read, write: if false;`). O servidor usa o Admin SDK, que não é afetado por essas regras.
+-   [ ] **6. Publique regras do Firestore que neguem todo acesso de clientes:** publique o `firestore.rules` do repositório ([guia de implantação, seção 4](guia-de-implantacao.md#4-compreendendo-o-caráter-não-secreto-das-chaves-do-firebase)). O servidor usa o Admin SDK, que não é afetado por essas regras.
 -   [ ] **7. Use o mínimo de permissões.** Uma conta de serviço de execução dedicada (`jor-mcp-runner`), impersonação em vez de chaves JSON nas máquinas de desenvolvimento, e um token fine-grained do GitHub só com `Contents: read`, limitado aos repositórios de `MCP_GITHUB_REPOS`, com validade de até 90 dias.
 -   [ ] **8. Indexe só o que todos os usuários podem ler.** Todo usuário da allow-list, e o provedor de IA por trás do cliente dele, consegue ler tudo nos repositórios configurados. Registre essa decisão.
 -   [ ] **9. Configure TTL e HTTPS.** Políticas de TTL do Firestore em `oauth_codes.expires_at` e `ip_rate_limits.expires_at`, e HTTPS em toda URL pública.
