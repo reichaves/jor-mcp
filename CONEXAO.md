@@ -25,7 +25,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário (veja o resultado na própria fase). As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fase 1 executada em 2026-10-17. Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -281,6 +281,23 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 6. **Textos:** trocar "curada pela Ambiental Media" por "curada pelos administradores da instância" em `config.py:104`, `oauth.py:192` e `contratos-api.md` (A7).
 
 **Aceite:** todos os links internos funcionam e o `CONTRIBUTING.md` é respeitado (formatação e as duas línguas sincronizadas).
+
+**Resultado (2026-10-17):** commit `4507998`, na branch `docs/phase1-connect-newsroom`, criada a partir de `chore/sync-upstream-0.13.1` (#8) porque a documentação nova depende da 0.13.1. Ainda sem push.
+
+| Item | Situação |
+|---|---|
+| 1 | Feito. `connect-your-newsroom.md` / `conectar-sua-redacao.md` com os cenários A/B/C, os passos de B e C, as variáveis por cenário, os clientes, as limitações e um checklist de segurança com 10 itens marcáveis. O R4 entrou com o cuidado sobre a ordem (desativar cadastros só depois do primeiro login de cada usuário) |
+| 2 | Feito. Seção "Use It with Your Newsroom's Data" / "Usar com os Dados da Sua Redação" e `--host 127.0.0.1` no exemplo de execução. O índice de `docs/` também aponta para o guia novo |
+| 3 | Feito. "Instância da Ambiental Media" separada de "Sua Própria Instância", com Claude Code e MCP Inspector. O endereço `/mcp` × `/mcp/sse` continua para a Fase 4 |
+| 4 | Feito. As quatro variáveis com padrão `ambiental.media` estão marcadas como obrigatórias fora da Ambiental, com um aviso no topo. Correção extra: `MCP_GITHUB_REPOS` aparecia como obrigatória, mas o padrão vazio só desliga a fonte GitHub |
+| 5 | Feito. §3.1 com o cuidado sobre a ordem, nova §5.2 com a revogação em três passos (R3), nova §8.3 com Workload Identity Federation (R17) e `123456789012` como número de projeto nos exemplos (A8). O `tier` obrigatório e o `roles/firebaseauth.admin` já tinham vindo com a 0.13.1 |
+| 6 | Feito, só em docstrings e documentação: "administradores da instância" em `src/config.py`, `src/api/oauth.py` e `api-contracts.md` / `contratos-api.md` |
+
+**Aceite conferido:**
+- **Links:** 0 links internos quebrados nos arquivos alterados, conferidos por um script que calcula as âncoras como o GitHub. Para isso, três âncoras que já estavam quebradas foram corrigidas: o selo do Docker nos dois README e o link do CI no guia em português.
+- **`CONTRIBUTING.md`:** listas com hífen, blocos de código com linguagem, nenhum link absoluto e as duas línguas sincronizadas.
+- **Código:** lint, formatação e tipos sem erros; 331 testes passando, com cobertura de 100%.
+- **Pendências para a Fase 4:** o guia do cenário C avisa que a impersonação ainda não foi validada de ponta a ponta na troca de token.
 
 ### Fase 2: código pequeno, com testes
 1. **Aviso na inicialização** (A1), em `src/server.py`, no `server_lifespan`:
