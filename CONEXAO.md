@@ -25,7 +25,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 e 2 executadas em 2026-10-17. Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1, 2 e 3 executadas em 2026-10-17. PRs no fork: #8 (sincronização), #9 (este plano), #10, #11 e #12 (Fases 1 a 3, empilhados nessa ordem). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -282,7 +282,7 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 
 **Aceite:** todos os links internos funcionam e o `CONTRIBUTING.md` é respeitado (formatação e as duas línguas sincronizadas).
 
-**Resultado (2026-10-17):** commit `4507998`, na branch `docs/phase1-connect-newsroom`, criada a partir de `chore/sync-upstream-0.13.1` (#8) porque a documentação nova depende da 0.13.1. Ainda sem push.
+**Resultado (2026-10-17):** commit `4507998`, na branch `docs/phase1-connect-newsroom`, criada a partir de `chore/sync-upstream-0.13.1` (#8) porque a documentação nova depende da 0.13.1. PR #10, com base no #8.
 
 | Item | Situação |
 |---|---|
@@ -321,7 +321,7 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 
 **Aceite:** `make check` verde, com cobertura de 90% ou mais e Bandit sem achados novos.
 
-**Resultado (2026-10-17):** commit `59c1766`, na branch `feat/phase2-replication-hardening`, criada a partir de `docs/phase1-connect-newsroom` (#10). Ainda sem push.
+**Resultado (2026-10-17):** commit `59c1766`, na branch `feat/phase2-replication-hardening`, criada a partir de `docs/phase1-connect-newsroom`. PR #11, com base no #10.
 
 | Item | Situação |
 |---|---|
@@ -357,6 +357,39 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 **Avisos visíveis no próprio HTML:** "Referência para testes e replicação. Em produção, sirva por HTTPS e aplique o checklist de segurança."
 
 **Aceite:** os testes manuais da §7 (itens 10 e 11) passam.
+
+**Resultado (2026-10-17):** commit `a90cd3b`, na branch `feat/phase3-reference-portal`, criada a partir de `feat/phase2-replication-hardening`. PR #12, com base no #11.
+
+**Desvios do plano:**
+- **Arquivos:** o discovery anuncia `{OAUTH_PORTAL_BASE_URL}/authorize`, então a página ficou em `portal/authorize/index.html` (com `authorize.js`, `consent.js` e `authorize.css`), e não em `portal/authorize.html`. Assim a rota funciona no `http.server` local, que redireciona `/authorize` para `/authorize/` mantendo os parâmetros, e no GCS.
+- **Sem `client_name`:** nenhuma rota do servidor o fornece, e a resposta do `/approve` também não. A página mostra o `client_id` e, como sinal confiável, o domínio de destino. Mostrar o `client_name` exigiria uma rota nova no servidor.
+- **`redirect_uri` obrigatório no portal:** o servidor aceita o pedido sem ele, mas aí o usuário não veria o destino.
+
+| Passo do fluxo | Situação |
+|---|---|
+| 1 | Feito. `parseAuthorizeParams` em `consent.js` exige `client_id`, `code_challenge`, `code_challenge_method=S256` e um `redirect_uri` http(s); aceita `response_type` ausente ou `code` |
+| 2 | Feito, com o `client_id` no lugar do `client_name`. O domínio de destino aparece em destaque, com aviso quando não é loopback nem `claude.ai` (R14). Só `textContent` (R13) |
+| 3 | Feito. Firebase compat SDK `10.14.1` do `www.gstatic.com`, com SRI `sha384` e `crossorigin="anonymous"` |
+| 4 | Feito. `POST {serverBaseUrl}/api/oauth/approve` com `Authorization: Bearer <idToken>` e `credentials: "omit"` |
+| 5 | Feito. `safeRedirectTarget` só segue o `redirect_uri` da resposta, se for http(s) e do mesmo domínio mostrado (R12). `403` mostra "conta não autorizada"; `400`, `401` e `429` também têm mensagens. "Negar" não redireciona |
+| 6 | Feito. Sessão do Firebase só em memória (`Persistence.NONE`), sem `localStorage` (R15). `config.js` no `.gitignore` |
+
+**Proteções além do plano:** CSP sem `unsafe-inline`, `<meta name="referrer" content="no-referrer">`, bloqueio quando a página roda dentro de um frame, e mensagem de erro para qualquer falha inesperada.
+
+**Aceite conferido:**
+- **Testes do portal:** `make check-portal` (`node --test`), 23 passando. Cobrem a validação, o aviso de destino, as checagens de redirecionamento e a segurança da página: nenhum `innerHTML` nem armazenamento, SRI em todo script externo, CSP sem `unsafe-inline`.
+- **Chrome headless**, com o portal em `127.0.0.1:3000` e um `config.js` local fora do git:
+  - pedido válido: etapa de login, destino `localhost`, sem aviso;
+  - `redirect_uri=https://evil.example/cb`: aviso visível;
+  - `client_id=<img src=x onerror=alert(1)>`: texto literal, nenhum `<img>` no DOM (§7, item 11);
+  - sem `code_challenge`: erro;
+  - `redirect_uri=javascript:...`: erro.
+  O Firebase carregou, o que confirma os hashes SRI, e nenhuma violação de CSP foi registrada.
+- **Defeito encontrado e corrigido no teste real:** a primeira versão ficava presa em "Loading…" esperando o `setPersistence` do Firebase. Agora a página renderiza na hora, e a persistência é aguardada só no clique de login.
+- **Python:** sem mudança; 345 testes, cobertura de 100%, Bandit sem achados.
+- **Pendente para a Fase 4:** o login com Google e a chamada real ao `/approve`, incluindo o item 10 da §7 (redirecionamento recusado com `redirect_uri` de outro domínio).
+- **Limites conhecidos:** o `frame-ancestors` não pode ser declarado em `<meta>` e precisa vir de um cabeçalho do Load Balancer em produção; o `apis.google.com/js/api.js`, inserido pelo próprio Firebase, carrega sem SRI; os testes do portal não rodam no CI, que só prepara o ambiente Python.
+- **Correção extra (A7):** "curated manually by Ambiental Media" ainda aparecia na regra da allow-list em `api-contracts.md` / `contratos-api.md`, e foi corrigido.
 
 ### Fase 4: teste de ponta a ponta local (cenário C)
 1. Criar a conta de serviço e as permissões (§4.1, cenário C, passos 2 e 3).
