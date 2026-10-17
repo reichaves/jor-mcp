@@ -191,8 +191,8 @@ def _redirect_with_code(redirect_uri: str, code: str, state: str | None) -> str:
 async def _resolve_user_role(db: FirestoreAsyncClient, email: str | None) -> str | None:
     """Return the role assigned to *email*, or None when access must be denied.
 
-    The allow-list (``allowed_users``) is curated manually by Ambiental Media and
-    is the source of truth for both access and role: a document grants access
+    The allow-list (``allowed_users``) is curated manually by the instance
+    administrators and is the source of truth for both access and role: a document grants access
     only when it exists, its ``status`` is ``"active"`` and its ``tier`` names a
     known role. A user who was never assigned a role is treated exactly like a
     user who is not on the list.

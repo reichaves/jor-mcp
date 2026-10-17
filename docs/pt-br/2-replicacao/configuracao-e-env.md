@@ -29,6 +29,9 @@ O Jor-MCP foi projetado como uma plataforma totalmente serverless no **Google Cl
 
 Configure estas variáveis nas configurações de ambiente do seu serviço Cloud Run ou nos arquivos `.env` locais.
 
+> [!IMPORTANT]
+> As variáveis marcadas como **obrigatórias fora da Ambiental Media** têm como padrão as URLs da própria Ambiental Media. Em qualquer outra instância, defina todas elas: caso contrário, o servidor pesquisa o WordPress da Ambiental Media e manda os seus usuários para o portal de consentimento da Ambiental Media. Veja [Conectar os Dados da Sua Redação](conectar-sua-redacao.md#2-variáveis-obrigatórias-por-cenário) para os valores por cenário.
+
 ### 2.1 Estado e Limitação de Taxa (Firestore)
 -   `FIRESTORE_DATABASE_ID` (Padrão: `"(default)"`): O ID do banco de dados Firestore. Substitua se utilizar uma instância de banco de dados nomeada.
 -   `RATE_LIMIT_COLLECTION` (Padrão: `"rate_limits"`): Coleção do Firestore contendo janelas mensais de contadores de usuários.
@@ -45,9 +48,9 @@ de outra forma permitiria a qualquer pessoa inundar o Firestore via `POST /api/o
 -   `IP_RATE_LIMIT_TRUSTED_PROXIES` (Padrão: `"1"`): Número de camadas de proxy confiáveis acrescentando entradas ao final de `X-Forwarded-For`. O Google Cloud Load Balancing reescreve o cabeçalho como `<valor-enviado>, <ip-do-cliente>, <ip-do-load-balancer>`, portanto o IP real do cliente é a entrada `IP_RATE_LIMIT_TRUSTED_PROXIES + 1` posições a partir da direita (isto é, a penúltima entrada, imediatamente antes do IP do load balancer). Ler a primeira entrada permitiria que qualquer chamador forjasse sua identidade. Use `"0"` quando o contêiner for acessado diretamente sem proxy.
 
 ### 2.2 Segurança e Proxy OAuth 2.1
--   `CORS_ALLOWED_ORIGINS` (Padrão: `"http://localhost:3000,https://jormcp.ambiental.media"`): Lista de origens permitidas (CORS) separadas por vírgula.
--   `OAUTH_SERVER_BASE_URL` (Padrão: `"https://jormcp.ambiental.media"`): URL pública deste servidor. Utilizado para metadados de descoberta.
--   `OAUTH_PORTAL_BASE_URL` (Padrão: `"https://jormcp.ambiental.media"`): URL pública do portal Next.js.
+-   `CORS_ALLOWED_ORIGINS` (Padrão: `"http://localhost:3000,https://jormcp.ambiental.media"`; **obrigatória fora da Ambiental Media** em produção): Lista de origens permitidas (CORS) separadas por vírgula.
+-   `OAUTH_SERVER_BASE_URL` (Padrão: `"https://jormcp.ambiental.media"`; **obrigatória fora da Ambiental Media**): URL pública deste servidor. Utilizado para metadados de descoberta.
+-   `OAUTH_PORTAL_BASE_URL` (Padrão: `"https://jormcp.ambiental.media"`; **obrigatória fora da Ambiental Media**): URL pública do portal de consentimento.
 -   `OAUTH_CLIENTS_COLLECTION` (Padrão: `"oauth_clients"`): Coleção do Firestore que armazena clientes registrados.
 -   `OAUTH_CODES_COLLECTION` (Padrão: `"oauth_codes"`): Coleção do Firestore que armazena códigos OAuth temporários e estado PKCE.
 -   `OAUTH_CODE_TTL_SECONDS` (Padrão: `"600"`): Tempo de vida dos códigos de autorização emitidos.
@@ -55,9 +58,9 @@ de outra forma permitiria a qualquer pessoa inundar o Firestore via `POST /api/o
 -   `FIREBASE_WEB_API_KEY` (Obrigatório em produção): A Web API Key encontrada nas configurações do seu projeto Firebase, usada para a troca segura de tokens.
 
 ### 2.3 Configurações de Fontes de Conteúdo Externas
--   `WORDPRESS_API_URL` (Padrão: `"https://ambiental.media/wp-json"`): URL base da API do CMS WordPress de destino.
+-   `WORDPRESS_API_URL` (Padrão: `"https://ambiental.media/wp-json"`; **obrigatória fora da Ambiental Media**): URL base da API do CMS WordPress de destino.
 -   `MCP_GITHUB_TOKEN` (Opcional para repositórios públicos, recomendado): Token de Acesso Pessoal (PAT) para autenticação na API do GitHub.
--   `MCP_GITHUB_REPOS` (Obrigatório): Lista de repositórios do GitHub separados por vírgula (no formato `proprietario/repositorio`).
+-   `MCP_GITHUB_REPOS` (Padrão: vazio, o que desliga a fonte GitHub): Lista de repositórios do GitHub separados por vírgula (no formato `proprietario/repositorio`). Só são lidos arquivos chamados `pt.json` ou `en.json`.
 -   `MCP_GITHUB_API_BASE_URL` (Padrão: `"https://api.github.com"`): Endpoint da API REST do GitHub.
 
 ### 2.4 Diagnóstico e Telemetria
