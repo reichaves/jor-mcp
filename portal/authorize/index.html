@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      frame-ancestors cannot be set from a <meta> tag: in production, also send
+      "Content-Security-Policy: frame-ancestors 'none'" as a response header.
+      connect-src lists the local server; add your server's origin if it differs
+      from the portal's.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self'; img-src 'self'; connect-src 'self' http://localhost:8080 http://127.0.0.1:8080 https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com; frame-src https://*.firebaseapp.com https://*.web.app https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>jor-mcp: authorize access</title>
+    <link rel="stylesheet" href="/authorize/authorize.css" />
+  </head>
+  <body>
+    <main>
+      <p class="notice" role="note">
+        Reference portal for testing and replication. In production, serve it over HTTPS and
+        apply the security checklist in the replication guide.
+      </p>
+
+      <h1>Authorize access to jor-mcp</h1>
+
+      <section id="step-loading" data-step>
+        <p>Loading…</p>
+      </section>
+
+      <section id="request" hidden>
+        <dl>
+          <dt>Client ID</dt>
+          <dd id="client-id"></dd>
+          <dt>The authorization will be sent to</dt>
+          <dd id="destination" class="destination"></dd>
+        </dl>
+        <p id="destination-warning" class="warning" role="alert" hidden>
+          This destination is not a local address nor a known client callback. Continue only if
+          you started this connection yourself and recognize this domain.
+        </p>
+      </section>
+
+      <section id="step-sign-in" data-step hidden>
+        <p>Sign in with the Google account registered on this server.</p>
+        <button id="sign-in" type="button">Sign in with Google</button>
+      </section>
+
+      <section id="step-consent" data-step hidden>
+        <p>Signed in as <strong id="account"></strong>.</p>
+        <p>
+          Allowing gives this client read access to the content this server indexes, on your
+          behalf.
+        </p>
+        <div class="actions">
+          <button id="allow" type="button">Allow access</button>
+          <button id="deny" type="button" class="secondary">Deny</button>
+        </div>
+      </section>
+
+      <section id="step-denied" data-step hidden>
+        <p>Access was not granted. You can close this window.</p>
+      </section>
+
+      <section id="step-error" data-step hidden>
+        <p id="error-message" class="error" role="alert"></p>
+      </section>
+    </main>
+
+    <script
+      src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"
+      integrity="sha384-ZaR6mWzmJtrRibZ1Vm7SoHFr8OXjyAuGAXalGDKqbxFT18oi/z+oZLIRFkpeNor1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"
+      integrity="sha384-I1LYojsZ5RM1cOda44Z2h42Qa6YfsQ1XkXxREnhp4ueYBR/4d1pG1K+NZM537Vsj"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/config.js"></script>
+    <script type="module" src="/authorize/authorize.js"></script>
+  </body>
+</html>

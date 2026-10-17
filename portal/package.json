@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Reference consent portal for jor-mcp. No dependencies; tests use node --test."
+}
