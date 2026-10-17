@@ -25,7 +25,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1, 2 e 3 executadas em 2026-10-17. PRs no fork: #8 (sincronização), #9 (este plano), #10, #11 e #12 (Fases 1 a 3, empilhados nessa ordem). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. PRs no fork: #8 (sincronização), #9 (este plano), #10, #11, #12 e #13 (Fases 1 a 4, empilhados nessa ordem). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -112,7 +112,7 @@ O jor-mcp se apresenta como fácil de replicar ("Easily Forkable"), mas quem che
 | "O portal não guarda dados" | **Confirmada** [código]: `contratos-api.md` §4.2 e `src/api/oauth.py:290`. O portal só envia o token do Firebase e os parâmetros do PKCE |
 | "O Firebase é configurado por variáveis (`NEXT_PUBLIC_FIREBASE_API_KEY`)" | **Provável** [inferido]: o código é privado |
 | "Dá para fazer uma página HTML simples" | **Confirmada** [código]: o contrato tem três passos, e o CORS padrão já libera `http://localhost:3000` (`config.py:57`) |
-| "`create_custom_token` deve falhar com as credenciais pessoais" | **Provável** [inferido] (`oauth.py:402`). Correção: impersonar uma conta de serviço. Testar na Fase 4 |
+| "`create_custom_token` deve falhar com as credenciais pessoais" | **Confirmada na Fase 4.** Com credenciais impersonadas também falha (`key_id`); a correção é `FIREBASE_SERVICE_ACCOUNT_ID` |
 | Faltava dizer | Na 0.13.x, o `set_custom_user_claims` também exige `Firebase Authentication Admin`. A tabela de IAM do original (`firebase-and-firestore.md`) não lista essa chamada, mas a permissão já está incluída por causa do `get_user` |
 
 ---
@@ -403,6 +403,31 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 6. Com o primeiro login feito, desativar o cadastro de novo (`disabledUserSignup: true`) e confirmar que o login seguinte continua funcionando.
 7. Opcional: túnel temporário para testar o Claude Desktop (R11).
 
+**Resultado (2026-10-17):** commit `abe6c82`, na branch `fix/phase4-e2e-local`, criada a partir de `feat/phase3-reference-portal`. PR #13, com base no #12.
+
+**Achado principal:** o cenário C, como a Fase 1 o documentou, não completava o login. Com credenciais impersonadas (`gcloud auth application-default login --impersonate-service-account`), o Firebase Admin SDK usa as credenciais como assinante direto e o `create_custom_token` falha com `'Credentials' object has no attribute 'key_id'`; com as credenciais pessoais, falha com "Failed to determine service account". A correção é a variável opcional `FIREBASE_SERVICE_ACCOUNT_ID`, repassada como `serviceAccountId` no `initialize_app`, para que o SDK assine pelo IAM `signBlob`. O `FIREBASE_CONFIG` não aceita essa opção. O Cloud Run não muda. Há 2 testes novos.
+
+| Passo | Situação |
+|---|---|
+| 1 | Feito pelo usuário com um script revisado: APIs IAM e IAM Credentials ativadas; conta `jor-mcp-local` com `roles/datastore.user` e `roles/firebaseauth.admin`; `roles/iam.serviceAccountTokenCreator` sobre ela para ela mesma e para o usuário; ADC impersonando a conta |
+| 2 | Feito. Servidor e portal em `127.0.0.1`, com `FIREBASE_SERVICE_ACCOUNT_ID` definido. O aviso da Fase 2 listou só o `WORDPRESS_API_URL` |
+| 3 | Feito com um cliente MCP em script (descoberta, DCR, PKCE, callback em loopback): registro `201`, `/approve` `200`, troca `200` (Bearer de 3600 s e refresh token), **reuso do código `400 invalid_grant`**. No Firestore: cliente em `oauth_clients`, `oauth_codes` vazio depois da troca. No Firebase Auth: conta criada só com `google.com` e claim `{"tier": "basic"}` |
+| 4 | Feito. **O endereço é `/mcp`**; `GET /mcp/sse` com token válido responde `404`. Guias corrigidos |
+| 5 | Feito. `initialize`, `tools/list` e as três ferramentas (`list_latest_news`, `search_content`, `get_full_article`) responderam com conteúdo real. Depois, pelo **Claude Code** (`claude mcp add --transport http jor-mcp-local http://localhost:8080/mcp`, autenticação pelo `/mcp`), `list_latest_news` respondeu dentro da sessão |
+| 6 | Feito. Cadastro desativado pelo usuário (`disabledUserSignup: true`) e novo login com `200`. Ressalva: a configuração do Firebase não registra a hora da mudança, então a ordem (cadastro fechado antes do login) segue o combinado, sem prova nos registros |
+| 7 | Não feito (opcional) |
+
+**Testes da §7 feitos nesta fase:**
+- **Item 10:** com `redirect_uri=https://evil.example/cb` e um cliente registrado para loopback, o `/approve` respondeu `400`, nenhum código foi emitido e o portal mostrou "The authorization request is invalid" sem redirecionar.
+- **Revogação (§7, item 6):** `scripts/revoke_user.py` na conta de teste. Antes: renovação `200`, claim `{"tier": "basic"}`. Depois: **todas as tentativas de renovar o token foram recusadas**, a claim ficou vazia e a allow-list ficou `disabled`. O ID token já emitido continuou aceito até expirar (no máximo uma hora), como diz a §5.2 do guia. O acesso foi restaurado em seguida (`status: active`).
+- **Item 13 (ponta a ponta):** passou, com o WordPress configurado no `.env` local, que ainda é o da Ambiental por falta de outro site.
+
+**Aceite conferido:** lint, formatação e tipos sem erros; 347 testes, cobertura de 100%; Bandit sem achados; portal 23 testes; 0 links quebrados.
+
+**Ainda não testado:** o item 4 da §7 (uma conta Google fora da lista deve receber `403`), que exige uma segunda conta.
+
+**O que ficou ativo no ambiente local:** a conta `jor-mcp-local` e as permissões dela no projeto de testes; as credenciais de aplicação impersonando essa conta (para voltar: `gcloud auth application-default login`); o servidor `jor-mcp-local` na configuração do Claude Code deste projeto (para remover: `claude mcp remove jor-mcp-local -s local`).
+
 ### Fase 5: contribuição com o original (opcional)
 - Abrir um PR em `ambiental-media/jor-mcp` com as Fases 1 e 2 e, se a Ambiental quiser, a Fase 3, seguindo o `.github/PULL_REQUEST_TEMPLATE.md` e o `make check`.
 - Mencionar os achados S1 (já resolvido na 0.13.0), S3, S4 e S11. O S12 já foi resolvido pela própria Ambiental no #70. **S3 e S4 devem ser comunicados em privado antes**, porque afetam a produção da Ambiental.
@@ -449,3 +474,4 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 4. **Faturamento:** o cenário B exige faturamento no GCP (Cloud Run e Load Balancer). O cenário C não exige.
 5. **Fase 0:** decidir se a branch `chore/sync-upstream-0.13.1` vai para `main` por PR no fork.
 6. **CVE-2026-59951 no `mcp`:** atualizar para a 1.30.0 ou superior (`uv lock --upgrade-package mcp`) num PR separado, como foi feito com o `urllib3`.
+7. **Limpeza do ambiente de testes:** manter ou remover a conta `jor-mcp-local`, a impersonação nas credenciais de aplicação e o `jor-mcp-local` no Claude Code (resultado da Fase 4).
