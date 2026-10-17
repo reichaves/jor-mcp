@@ -12,7 +12,8 @@ O plano descreve três formas de uso. Na primeira, a pessoa usa o serviço da Am
 - liberdade para escolher quais arquivos do GitHub entram na busca;
 - um arquivo de publicação na nuvem sem dados da Ambiental;
 - uma página de login simples que qualquer redação possa usar;
-- uma ferramenta para tirar de uma vez o acesso de quem sai da equipe.
+- uma ferramenta para tirar de uma vez o acesso de quem sai da equipe;
+- pesquisa no site WordPress da própria redação e em repositórios escolhidos do GitHub, públicos ou privados, com dados em JSON, CSV e Markdown (Fase 4.5).
 
 A revisão de segurança encontrou riscos. O mais grave: na versão instalada neste computador, que está desatualizada, qualquer pessoa com uma conta Google poderia entrar, mesmo fora da lista de autorizados. Além disso, o programa estava aberto para qualquer aparelho conectado ao mesmo Wi-Fi. Também foram encontrados riscos menores:
 - dois riscos que também afetam o serviço da Ambiental, descritos aqui só de forma resumida até ela corrigi-los;
@@ -428,6 +429,76 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 
 **O que ficou ativo no ambiente local:** a conta `jor-mcp-local` e as permissões dela no projeto de testes; as credenciais de aplicação impersonando essa conta (para voltar: `gcloud auth application-default login`); o servidor `jor-mcp-local` na configuração do Claude Code deste projeto (para remover: `claude mcp remove jor-mcp-local -s local`).
 
+### Fase 4.5: outros sites e repositórios do GitHub
+**Objetivo:** ligar a instância a **outro site WordPress** e a **repositórios escolhidos do GitHub**, públicos e privados, com dados em JSON, CSV e Markdown. As Fases 0 a 4 provaram o fluxo de login e as ferramentas, mas ainda com o WordPress da Ambiental e sem repositórios.
+
+**Decisões (2026-10-17):** trocar por **um** outro WordPress (o da redação), só com configuração; indexar uma **lista escolhida** de repositórios (`dono/repo`), públicos e privados; ler **JSON, CSV e Markdown**. A URL do site e a lista de repositórios serão informadas na execução (passos C1 e C2).
+
+**Como conectar, para qualquer redação:**
+- **Outro WordPress:**
+  - defina `WORDPRESS_API_URL=https://<site>/wp-json`;
+  - confira que `GET https://<site>/wp-json/wp/v2/posts?per_page=1` responde `200` com JSON, porque a REST API precisa ser pública;
+  - cada instância pesquisa **um** site.
+- **Repositórios do GitHub:**
+  - liste-os em `MCP_GITHUB_REPOS` (`dono/repo,dono/outro-repo`);
+  - escolha quais arquivos entram com `MCP_GITHUB_FILENAMES`, que a partir desta fase aceita padrões (`*.json,*.csv,*.md`);
+  - para repositórios privados, crie um token fine-grained: **Settings → Developer settings → Fine-grained tokens**, "Only select repositories", só `Contents: Read-only`, validade de até 90 dias (R8). Grave-o em `MCP_GITHUB_TOKEN` (no `.env` local ou no Secret Manager).
+- **Antes de indexar um repositório privado:** registre que todo o conteúdo dele poderá ser lido por todos os usuários da allow-list e pelo provedor de IA (S9 e R9).
+
+**Segurança:**
+
+| Risco | Medida |
+|---|---|
+| **S9/R9:** conteúdo de repositórios privados visível para todos os usuários e para o provedor de IA | Registrar a decisão antes de configurar; indexar só repositórios que todos podem ler |
+| **R8:** token com permissão demais ou exposto | Fine-grained, só os repositórios escolhidos, só `Contents: Read-only`, até 90 dias. O token é gravado no `.env` à mão pelo usuário e nunca aparece em comandos, saídas ou traces |
+| **S10:** prompt injection pelo texto de Markdown e CSV | As ferramentas são só de leitura; o conteúdo indexado é tratado como dado não confiável e isso fica documentado |
+| Cota da API do GitHub (60/h sem token, 5.000/h com token) e lentidão com muitos arquivos | Cache em memória com validade, limite de arquivos por repositório e de tamanho por arquivo |
+| Logs vazando conteúdo | Registrar só repositório, caminho e contagens, nunca o conteúdo dos arquivos |
+
+**Parte B: código** (branch `feat/phase45-github-formats`, a partir de `fix/phase4-e2e-local`). A base é a Fase 4 (#13), e não a branch do R16, para que o PR possa ser público.
+1. **Padrões de nome:** `MCP_GITHUB_FILENAMES` (`parse_github_filenames`, `src/config.py`) passa a aceitar padrões `fnmatch` aplicados ao nome do arquivo. Extensões aceitas: `.json`, `.csv`, `.md` e `.markdown`. Nomes exatos continuam funcionando, então o padrão `pt.json,en.json` não muda. Em `_discover_i18n_paths`, a comparação passa a ser feita com `fnmatchcase`.
+2. **Leitura por formato** (`_parse_content` em `src/services/github.py`, chamada por `_fetch_file`):
+   - `.json`: objeto **ou lista** na raiz;
+   - `.csv`: `csv.DictReader`, com cabeçalho obrigatório, gerando uma lista de linhas;
+   - `.md` e `.markdown`: `{"text": conteúdo}`.
+   `GitHubFileResult.data` passa a aceitar `dict` ou `list`. `_search_github` e `_collect_strings` (`src/tools.py`) já percorrem listas e dicionários e não mudam.
+3. **Limites:**
+   - `MCP_GITHUB_MAX_FILE_BYTES` (padrão `1000000`, o limite da Contents API), usando o `size` da árvore (`_GitHubTreeItem`);
+   - `MCP_GITHUB_MAX_FILES_PER_REPO` (padrão `50`).
+   Os dois avisam no log quando cortam algo.
+4. **Cache:** `fetch_github_i18n_content` guarda o resultado por `MCP_GITHUB_CACHE_SECONDS` (padrão `300`; `0` desliga), com um `asyncio.Lock` para que buscas simultâneas não baixem tudo de novo. O cache é por instância do Cloud Run.
+5. **Textos:** as descrições de `search_content` e de `_search_github` passam a falar em "arquivos JSON, CSV e Markdown configurados".
+6. **Testes** (`tests/test_github_service.py`, `tests/test_tools.py`):
+   - padrões e extensões;
+   - JSON com lista na raiz;
+   - CSV com e sem cabeçalho;
+   - Markdown;
+   - arquivo grande pulado e limite de arquivos;
+   - cache: acerto, expiração e `0`;
+   - uma busca que encontra uma célula de CSV e um trecho de Markdown.
+7. **Documentação (en, pt-br):**
+   - `configuration-and-env`: as variáveis novas;
+   - `connect-your-newsroom`: os formatos e a tabela de variáveis;
+   - `integrations/github`: os formatos e os limites;
+   - uma nota sobre S9 e S10 no checklist.
+
+**Aceite da Parte B:** `make check-lint check-format check-types check-tests check-sast` sem erros, cobertura de 90% ou mais, Bandit sem achados novos, `make check-portal` passando e 0 links quebrados. **Para desfazer:** reverter o commit; o padrão `pt.json,en.json` mantém o comportamento anterior.
+
+**Parte C: configuração e teste real** (precisa do usuário em C1 a C4):
+1. **C1, WordPress:** o usuário informa a URL. Eu confiro, só lendo, que a REST API responde `200`.
+2. **C2, GitHub:** o usuário informa os repositórios e quais são privados, cria o token fine-grained e o grava **ele mesmo** no `.env` como `MCP_GITHUB_TOKEN`.
+3. **C3, decisão R9:** o usuário confirma que o conteúdo pode ser lido por todos da allow-list e pelo provedor de IA. A decisão é registrada neste documento.
+4. **C4, `.env`:** o usuário define `WORDPRESS_API_URL`, `MCP_GITHUB_REPOS` e `MCP_GITHUB_FILENAMES`. Eu só confiro, sem imprimir valores, que as chaves existem.
+5. **C5:** reiniciar o servidor em `127.0.0.1:8080`. O aviso de inicialização não deve mais listar `WORDPRESS_API_URL`.
+6. **C6, pelo Claude Code** (`jor-mcp-local`):
+   - `list_latest_news` com o novo site;
+   - `search_content` com um termo presente num JSON, num CSV e num Markdown, inclusive de um repositório privado;
+   - `get_full_article` de uma matéria do novo site;
+   - uma segunda busca usando o cache.
+7. **C7:** registrar os resultados aqui, atualizar o trace e abrir o PR da Parte B, empilhado sobre o #13.
+
+**Aceite da Parte C:** os itens 14 a 17 da §7 passam. **Para desfazer:** voltar o `.env` aos valores anteriores e revogar o token no GitHub.
+
 ### Fase 5: contribuição com o original (opcional)
 - Abrir um PR em `ambiental-media/jor-mcp` com as Fases 1 e 2 e, se a Ambiental quiser, a Fase 3, seguindo o `.github/PULL_REQUEST_TEMPLATE.md` e o `make check`.
 - Mencionar os achados S1 (já resolvido na 0.13.0), S3, S4 e S11. O S12 já foi resolvido pela própria Ambiental no #70. **S3 e S4 devem ser comunicados em privado antes**, porque afetam a produção da Ambiental.
@@ -439,8 +510,8 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 | Tipo | Arquivos |
 |---|---|
 | Documentação | `README.md`, `README_pt-br.md`, `docs/{pt-br,en}/1-*/conectando-clientes.md`/`connecting-clients.md`, `contratos-api.md`/`api-contracts.md`, `docs/{pt-br,en}/2-*/configuracao-e-env.md`/`configuration-and-env.md`, `guia-de-implantacao.md`/`deployment-guide.md`, **novos** `conectar-sua-redacao.md`/`connect-your-newsroom.md` e `CONEXAO.md` |
-| Código | `src/config.py`, `src/server.py`, `src/services/github.py` e, opcionalmente, `src/api/oauth.py` |
-| Testes | `tests/test_server.py`, `tests/test_github_service.py`, novo `tests/test_revoke_user.py` e, opcionalmente, `tests/test_oauth_router.py` |
+| Código | `src/config.py`, `src/server.py`, `src/services/github.py`, `src/tools.py` (Fase 4.5) e, opcionalmente, `src/api/oauth.py` |
+| Testes | `tests/test_server.py`, `tests/test_github_service.py`, `tests/test_tools.py` (Fase 4.5), novo `tests/test_revoke_user.py` e, opcionalmente, `tests/test_oauth_router.py` |
 | Infra | `service.yaml`, novo `firestore.rules` e `.gitignore` |
 | Scripts e portal | novos `scripts/revoke_user.py` e `portal/*` |
 
@@ -463,6 +534,10 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 | 11 | Portal (R13 e R14) | `client_name` com `<img onerror>`; `redirect_uri` de outro domínio | Texto aparece literal; alerta de domínio visível |
 | 12 | Regras do Firestore (R6) | `curl` no Firestore só com a apiKey | `403` |
 | 13 | Ponta a ponta | Fase 4, passos 3 a 5 | As três ferramentas respondem com dados do WordPress configurado |
+| 14 | Outro WordPress (Fase 4.5) | `list_latest_news` e `get_full_article` pelo Claude Code | Matérias do novo site; o aviso de inicialização não lista mais `WORDPRESS_API_URL` |
+| 15 | Formatos (Fase 4.5) | `search_content` com um termo presente num JSON, num CSV e num Markdown | Um resultado `source: github:<repo>` de cada formato |
+| 16 | Repositório privado (Fase 4.5) | Mesma busca num repositório privado, com o token fine-grained | Resultado do repositório privado; sem token, nenhum resultado dele |
+| 17 | Cache (Fase 4.5) | Duas buscas seguidas | A segunda não faz novas chamadas ao GitHub, conforme o log |
 
 ---
 
