@@ -210,3 +210,51 @@ async def test_server_lifespan_checks_ambiental_defaults(
         pass
 
     mock_warn.assert_called_once_with("my-newsroom-project")
+
+
+@pytest.mark.parametrize(
+    ("service_account", "expected_options"),
+    [
+        ("", None),
+        (
+            "runner@p.iam.gserviceaccount.com",
+            {"serviceAccountId": "runner@p.iam.gserviceaccount.com"},
+        ),
+    ],
+)
+@patch("src.server.setup_telemetry")
+@patch("firebase_admin.get_app", side_effect=ValueError("No app"))
+@patch("firebase_admin.initialize_app")
+@patch("src.server._mcp_http_app")
+@patch("src.server.FirestoreAsyncClient")
+@patch("httpx.AsyncClient")
+async def test_server_lifespan_passes_service_account_id(
+    mock_http_client_cls: MagicMock,
+    mock_firestore_cls: MagicMock,
+    mock_mcp_app: MagicMock,
+    mock_init: MagicMock,
+    _mock_get_app: MagicMock,
+    _mock_setup: MagicMock,
+    service_account: str,
+    expected_options: dict[str, str] | None,
+) -> None:
+    """FIREBASE_SERVICE_ACCOUNT_ID, when set, becomes the Admin SDK's serviceAccountId.
+
+    Impersonated credentials cannot sign custom tokens directly, so local runs name
+    the account and the SDK signs through IAM signBlob instead.
+    """
+    from src.server import server_lifespan
+
+    @asynccontextmanager
+    async def fake_mcp_lifespan(app):  # type: ignore[no-untyped-def]
+        yield
+
+    mock_firestore_cls.return_value = _make_fake_firestore()
+    mock_http_client_cls.return_value = AsyncMock()
+    mock_mcp_app.lifespan = fake_mcp_lifespan
+
+    with patch("src.server.FIREBASE_SERVICE_ACCOUNT_ID", service_account):
+        async with server_lifespan(MagicMock()):
+            pass
+
+    mock_init.assert_called_once_with(options=expected_options)

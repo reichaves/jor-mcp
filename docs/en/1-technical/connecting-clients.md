@@ -58,7 +58,7 @@ Return to Claude Desktop. You are ready to run searches, fetch articles, and ana
 
 ## Your Own Instance
 
-Replace `<your-domain>` with the public domain of your instance. The server mounts the MCP endpoint at `/mcp`; older material refers to `/mcp/sse`, so confirm the path with a signed-in client.
+Replace `<your-domain>` with the public domain of your instance. The server mounts the MCP endpoint at `/mcp`; `/mcp/sse`, cited in older material, answers `404` on this code base.
 
 ### Claude Desktop and claude.ai
 

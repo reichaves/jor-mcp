@@ -56,6 +56,7 @@ de outra forma permitiria a qualquer pessoa inundar o Firestore via `POST /api/o
 -   `OAUTH_CODE_TTL_SECONDS` (Padrão: `"600"`): Tempo de vida dos códigos de autorização emitidos.
 -   `ALLOWED_USERS_COLLECTION` (Padrão: `"allowed_users"`): Lista branca no Firestore contendo e-mails autorizados.
 -   `FIREBASE_WEB_API_KEY` (Obrigatório em produção): A Web API Key encontrada nas configurações do seu projeto Firebase, usada para a troca segura de tokens.
+-   `FIREBASE_SERVICE_ACCOUNT_ID` (Padrão: vazio): Conta de serviço com a qual o Firebase Admin SDK assina os custom tokens, pelo `signBlob` do IAM. Deixe vazio no Cloud Run. Defina ao rodar localmente com Application Default Credentials impersonadas, com as quais o SDK não consegue assinar diretamente; a conta precisa de `roles/iam.serviceAccountTokenCreator` sobre ela mesma.
 
 ### 2.3 Configurações de Fontes de Conteúdo Externas
 -   `WORDPRESS_API_URL` (Padrão: `"https://ambiental.media/wp-json"`; **obrigatória fora da Ambiental Media**): URL base da API do CMS WordPress de destino.

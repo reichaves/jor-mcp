@@ -58,7 +58,7 @@ Retorne ao Claude Desktop. Você já está pronto para realizar buscas, buscar a
 
 ## Sua Própria Instância
 
-Troque `<seu-dominio>` pelo domínio público da sua instância. O servidor monta o endpoint MCP em `/mcp`; materiais mais antigos citam `/mcp/sse`, então confirme o caminho com um cliente já autenticado.
+Troque `<seu-dominio>` pelo domínio público da sua instância. O servidor monta o endpoint MCP em `/mcp`; o `/mcp/sse`, citado em materiais mais antigos, responde `404` neste código.
 
 ### Claude Desktop e claude.ai
 

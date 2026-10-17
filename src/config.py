@@ -121,6 +121,15 @@ FIREBASE_WEB_API_KEY: str = os.environ.get("FIREBASE_WEB_API_KEY", "")
 real ID/refresh tokens via the Google Identity Toolkit REST API. Same value as
 the portal's ``NEXT_PUBLIC_FIREBASE_API_KEY``."""
 
+FIREBASE_SERVICE_ACCOUNT_ID: str = os.environ.get("FIREBASE_SERVICE_ACCOUNT_ID", "")
+"""Service account the Firebase Admin SDK signs custom tokens as, via IAM ``signBlob``.
+
+Leave empty on Cloud Run, where the runtime service account is discovered. Set it
+when the server runs with impersonated Application Default Credentials (local
+testing): the SDK cannot sign with those directly, so the token exchange fails
+unless the account is named here.
+"""
+
 IDENTITY_TOOLKIT_BASE_URL: str = os.environ.get(
     "IDENTITY_TOOLKIT_BASE_URL", "https://identitytoolkit.googleapis.com/v1"
 ).rstrip("/")
