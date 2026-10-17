@@ -26,7 +26,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A, B e C feitas; a Parte C foi só com o GitHub, porque o site indicado não é WordPress (veja a Fase 4.6). PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`) e #15 (Fase 4.5, Parte B, sobre o #13). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A, B e C feitas; a Parte C foi só com o GitHub, porque o site indicado não é WordPress (veja a Fase 4.6). PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`), #15 (Fase 4.5, Parte B, sobre o #13) e #16 (limite e exclusão na busca do GitHub, sobre o #15). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -551,6 +551,17 @@ Um incidente: a leitura da configuração do Firebase pela API imprimiu o `signI
 - **Arquivos de configuração entram na busca:** `CLAUDE.md`, `GEMINI.md`, `.claude/settings.json` e `vercel.json` aparecem como conteúdo. Os padrões só olham o nome do arquivo; uma lista de exclusão por pasta ou nome (por exemplo `MCP_GITHUB_EXCLUDE=.claude/*,CLAUDE.md`) resolveria.
 - **Conteúdo sensível de terceiros:** o `README.md` do `rafaelbressan/masterzap` descreve o material como conversas de vazamentos. Indexá-lo vai além da decisão R9 (quem pode ler): envolve avaliação editorial e de proteção de dados (LGPD) pela redação.
 - **Descrição da ferramenta em cache no cliente:** o Claude Code manteve a descrição anterior de `search_content` na sessão já aberta; o servidor já servia a nova. Clientes atualizam a descrição numa sessão nova ou ao reconectar.
+
+**Melhorias 1 e 2 implementadas (2026-10-17):** commit `4c90304`, na branch `feat/github-search-limits`, sobre a da Parte B. PR #16, com base no #15.
+- **Limite e ordenação** (`MCP_GITHUB_MAX_RESULTS`, padrão `10`, como na busca do WordPress; `0` desliga):
+  - os arquivos são ordenados pelo número de **ocorrências** do termo (`_count_matches`); contar ocorrências, e não trechos, evita desfavorecer um Markdown, que é um texto único;
+  - quando há corte, a lista termina com um item `notice` que informa o total, e a descrição de `search_content` explica esse item ao modelo.
+- **Exclusão** (`MCP_GITHUB_EXCLUDE`, vazia por padrão): padrões `fnmatch` comparados com o caminho completo; um padrão sem `/` também vale para o nome do arquivo em qualquer pasta. Os arquivos excluídos não são baixados.
+- **Teste real com os três repositórios:**
+  - `search_content("lobbying")` passou de 25 resultados, na ordem das pastas, para **10**, começando por `FINDINGS.md`, mais o aviso "mostrando 10 de 23";
+  - com `MCP_GITHUB_EXCLUDE=.claude/*,CLAUDE.md,GEMINI.md,AGENT_CONTEXT.md,vercel.json`, o download caiu de 107 para **100** arquivos.
+- **Aceite:** 4 testes novos, 367 no total, cobertura de 100%; lint, tipos e Bandit sem erros; portal 23 testes; 0 links quebrados.
+- **Limitação conhecida:** a ordenação conta repetições, então um arquivo longo e repetitivo pode ficar à frente de um curto e mais relevante.
 
 ### Fase 4.6: fonte para sites sem WordPress (plano, não aprovado)
 **Objetivo:** permitir que a instância pesquise um site que não é WordPress, a começar por `https://abraji.org.br`, que a Fase 4.5 mostrou não ter REST API, RSS nem sitemap.
