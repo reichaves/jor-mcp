@@ -26,7 +26,7 @@ Para cada risco, o plano propõe uma regra de proteção. O primeiro passo é at
 ---
 
 > **Situação:** plano revisado, versão 4, de 2026-10-17.
-> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 4.5: Partes A, B e C feitas; a Parte C foi só com o GitHub, porque o site indicado não é WordPress (veja a Fase 4.6). PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`), #15 (Fase 4.5, Parte B, sobre o #13) e #16 (limite e exclusão na busca do GitHub, sobre o #15). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
+> Fase 0 executada em 2026-10-17; os passos 2 e 6 foram feitos pelo usuário. Fases 1 a 4 executadas em 2026-10-17. Fase 5 aguarda conclusão. O desenvolvimento continua numa cópia de trabalho privada; este fork mantém os PRs públicos. Fase 4.5: Partes A, B e C feitas; a Parte C foi só com o GitHub, porque o site indicado não é WordPress (veja a Fase 4.6). PRs no fork: #8 (sincronização), #9 (este plano), #10 a #13 (Fases 1 a 4, empilhados nessa ordem), #14 (CVE do `mcp`, contra `main`), #15 (Fase 4.5, Parte B, sobre o #13) e #16 (limite e exclusão na busca do GitHub, sobre o #15). Veja o resultado de cada uma na própria fase. As outras fases continuam aguardando aprovação, uma de cada vez.
 >
 > **Mudanças da versão 4:** o original chegou à 0.13.1, que inclui a conta de serviço dedicada do #70 (§2.1, A3, S12, R7, R18); S1 e S2 fechados; S3 e S4 resumidos nesta versão pública (§3.1).
 >
@@ -605,7 +605,9 @@ O WordPress continua opcional: uma instância pode ter uma fonte, a outra ou as 
 
 **Decisões pendentes:** a autorização do site; se a fonte HTML substitui ou complementa o WordPress; e se a Fase 4.6 entra antes ou depois da Fase 5.
 
-### Fase 5: contribuição com o original (opcional)
+### Fase 5: contribuição com o original (opcional; aguarda conclusão)
+**Situação em 2026-10-17:** aguarda conclusão. Depende, nesta ordem, da comunicação privada à Ambiental sobre o S3 e o S4 e da decisão de quais fases propor. Nada foi aberto no repositório da Ambiental.
+
 - Abrir um PR em `ambiental-media/jor-mcp` com as Fases 1 e 2 e, se a Ambiental quiser, a Fase 3, seguindo o `.github/PULL_REQUEST_TEMPLATE.md` e o `make check`.
 - Mencionar os achados S1 (já resolvido na 0.13.0), S3, S4 e S11. O S12 já foi resolvido pela própria Ambiental no #70. **S3 e S4 devem ser comunicados em privado antes**, porque afetam a produção da Ambiental.
 
