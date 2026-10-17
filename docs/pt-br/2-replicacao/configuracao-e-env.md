@@ -21,6 +21,7 @@ O Jor-MCP foi projetado como uma plataforma totalmente serverless no **Google Cl
 4.  **Google Cloud Identity Platform / Firebase Auth:** Gerencia a autenticação Google SSO e emite JSON Web Tokens (JWTs) seguros.
 5.  **API REST externa do WordPress:** O site CMS de destino onde os artigos editoriais são publicados.
 6.  **API REST externa do GitHub:** Repositório de destino que hospeda metadados editoriais multilíngues em arquivos JSON.
+7.  **Conta de Serviço IAM (`jor-mcp-runner`):** A identidade de execução dedicada e de menor privilégio anexada ao Cloud Run. Suas funções devem cobrir Firestore, segredos, observabilidade e o Firebase Admin SDK — veja o [guia de implantação, seção 2](guia-de-implantacao.md).
 
 ---
 
@@ -61,9 +62,11 @@ de outra forma permitiria a qualquer pessoa inundar o Firestore via `POST /api/o
 
 ### 2.4 Diagnóstico e Telemetria
 -   `HTTP_TIMEOUT` (Padrão: `"10.0"`): Limite de tempo de solicitações HTTP de saída em segundos.
--   `OTEL_EXPORTER_OTLP_ENDPOINT` (Opcional): Endpoint do coletor para rastreamentos OTLP.
+-   `LOG_LEVEL` (Padrão: `"INFO"`): Nível mínimo do logger raiz.
+-   `OTEL_TRACES_EXPORTER` (Padrão: `"none"`): Exportador de spans — `otlp`, `console` ou `none`. A exportação é opcional por escolha explícita: definir apenas `OTEL_EXPORTER_OTLP_ENDPOINT` não surte efeito, esta variável também precisa ser definida como `otlp`. Um endpoint que recusa conexões faz cada lote tentar e falhar, inundando o log com erros transitórios — por isso o silêncio é o padrão. Os spans continuam sendo criados de qualquer forma; é deles que vem o `trace_id` presente em cada registro de log.
+-   `OTEL_EXPORTER_OTLP_ENDPOINT` (Opcional): Endpoint do coletor usado quando `OTEL_TRACES_EXPORTER=otlp`.
 -   `OTEL_SERVICE_NAME` (Padrão: `"jor-mcp"`): Nome do serviço registrado nos rastreamentos.
--   `GCP_PROJECT_ID` (Obrigatório para integração de rastreamento): ID do projeto GCP para vincular rastreamentos ao Cloud Logging.
+-   `GCP_PROJECT_ID` (Opcional no Cloud Run, obrigatório fora dele): ID do projeto GCP usado para vincular as entradas de log aos rastreamentos no Cloud Logging. No Cloud Run, é lido das credenciais do ambiente quando ausente. Em qualquer outro lugar precisa ser informado, caso contrário os campos de correlação são omitidos de todas as entradas de log.
 
 ---
 
