@@ -22,7 +22,7 @@ When the server starts, the lifespan handler:
 
 -   reads the `Authorization: Bearer <token>` header;
 -   validates the token with `auth.verify_id_token(...)`, allowing 60 seconds of clock skew;
--   extracts the `uid` and a `tier` claim (`basic` or `pro`; defaults to `basic` when absent) and passes both to the rate limiter;
+-   extracts the `uid` and the `tier` claim (`basic` or `pro`) and passes both to the rate limiter. There is no default: a token without a valid `tier` gets **403**;
 -   when the token is missing or invalid, answers **401** with `WWW-Authenticate: Bearer resource_metadata=...`. This header is what makes Claude Desktop open the browser to log in.
 
 Only `/health`, `/.well-known/*` and `/api/oauth/*` skip this check.
@@ -36,11 +36,11 @@ MCP clients such as Claude Desktop speak OAuth, not Firebase. The server bridges
 | Discovery | `GET /.well-known/oauth-*` | none (metadata only) |
 | Client registration (DCR) | `POST /api/oauth/register` | writes to the **`oauth_clients`** collection |
 | Consent | separate Next.js portal (`jor-mcp-site`) | Google SSO login through Firebase in the browser |
-| Approval | `POST /api/oauth/approve` | verifies the portal's Firebase token, checks **`allowed_users`**, stores the code and PKCE challenge in **`oauth_codes`** (valid for 10 minutes) |
+| Approval | `POST /api/oauth/approve` | verifies the portal's Firebase token, checks **`allowed_users`**, writes the user's `tier` as a custom claim (`auth.set_custom_user_claims`) and stores the code and PKCE challenge in **`oauth_codes`** (valid for 10 minutes) |
 | Code exchange | `POST /api/oauth/token` | reads and **deletes** the code (no replay), verifies PKCE S256, creates a custom token with `auth.create_custom_token(uid)` and exchanges it for ID and refresh tokens through the **Identity Toolkit API** (`accounts:signInWithCustomToken`) |
-| Refresh | `POST /api/oauth/token` (`refresh_token`) | **Secure Token API** (`securetoken.googleapis.com`) |
+| Refresh | `POST /api/oauth/token` (`refresh_token`) | **Secure Token API** (`securetoken.googleapis.com`), then checks **`allowed_users`** again: an unauthorized user has their refresh tokens revoked, and a changed `tier` is rewritten into the claim |
 
-The allow-list is the `allowed_users` collection: each document ID is a lowercase email, and access is granted only when `status == "active"`. It is curated manually (e.g. in the Firebase console).
+The allow-list is the `allowed_users` collection: each document ID is a lowercase email, and access is granted only when `status == "active"` and `tier` is `basic` or `pro`. It is curated manually (e.g. in the Firebase console).
 
 ## 4. Firestore: rate limits
 
@@ -66,8 +66,20 @@ Collection names can be overridden through environment variables; see [Configura
 ## 6. Operations notes
 
 -   **Native mode is required.** The code uses the native Firestore client (`google.cloud.firestore_v1`), which does not work with a database in Datastore mode.
--   **Granting a user access:** create a document in `allowed_users` whose ID is the user's email in lowercase, with the field `status: "active"`.
--   **Granting the `pro` tier:** the tier comes from a Firebase custom claim. Set it with the Admin SDK, e.g. `auth.set_custom_user_claims(uid, {"tier": "pro"})`. This repository does not automate it.
+-   **Granting a user access:** create a document in `allowed_users` whose ID is the user's email in lowercase, with the fields `status: "active"` and `tier: "basic"` (or `"pro"`). Without `tier`, `/approve` answers **403**.
+-   **Changing the tier:** edit `tier` in `allowed_users`. The server copies it into the Firebase custom claim at the next approval or token refresh.
 
 ## Architectural Decision: Why Serverless State?
 We rely on Firestore rather than an in-memory cache or a provisioned Redis instance to maintain statelessness in the Cloud Run containers. This allows horizontal scaling to zero, maximizing FinOps efficiency while preventing rate-limit circumvention during traffic spikes.
+
+## Runtime IAM Roles for the Firebase Admin SDK
+The server does more than verify ID tokens. `src/api/oauth.py` also mints custom tokens, looks users up, and revokes refresh tokens, and each of those calls has its own IAM requirement on the Cloud Run runtime service account:
+
+| Operation | Call | Required role |
+| :--- | :--- | :--- |
+| Verify an ID token | `auth.verify_id_token` | None — public signing certificates are fetched over HTTPS. |
+| Mint a custom token | `auth.create_custom_token` | `roles/iam.serviceAccountTokenCreator`, bound on the runtime account itself: on Cloud Run the Admin SDK signs through the IAM `signBlob` API. |
+| Look up a user | `auth.get_user` | `roles/firebaseauth.admin` |
+| Revoke refresh tokens | `auth.revoke_refresh_tokens` | `roles/firebaseauth.admin` |
+
+See the [deployment guide, section 2](../../2-replication/deployment-guide.md) for the full runtime role list.

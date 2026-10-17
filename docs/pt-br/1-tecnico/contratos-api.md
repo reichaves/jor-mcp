@@ -264,7 +264,8 @@ então o load balancer deve rotear `/.well-known/*` para o NEG do backend.
 *   `client_id` e `code_challenge` são obrigatórios; apenas `code_challenge_method = "S256"` é aceito.
 *   O `client_id` deve existir em `oauth_clients`, caso contrário `400 invalid_client`.
 *   `redirect_uri` é opcional: quando presente é normalizado (loopback) e deve corresponder a uma URI registrada (senão `400 invalid_request`); quando ausente, usa-se a primeira URI registrada do cliente.
-*   **Whitelist:** o email do usuário (extraído do JWT) deve existir na coleção `allowed_users` com `status == "active"`. Um token válido cujo email esteja ausente/fora da whitelist/inativo retorna `403 access_denied`. A lista é curada manualmente pela Ambiental Media (ex: console do Firebase); o acesso é só via Google SSO.
+*   **Whitelist e role:** o email do usuário (extraído do JWT) deve existir na coleção `allowed_users` com `status == "active"` **e** com um `tier` válido (`"basic"` ou `"pro"`). Um token válido cujo email esteja ausente/fora da whitelist/inativo, ou cujo documento não tenha role atribuída, retorna `403 access_denied`. A lista é curada manualmente pela Ambiental Media (ex: console do Firebase); o acesso é só via Google SSO.
+*   **Sincronização da role:** no sucesso, a role do Firestore é espelhada na custom claim `tier` do usuário no Firebase Auth, de onde os middlewares a leem em cada requisição.
 *   Um `authorization_code` aleatório é gerado e salvo em `oauth_codes` junto com o `code_challenge`, o `uid`, o `redirect_uri` e uma expiração curta (`OAUTH_CODE_TTL_SECONDS`, padrão 600s).
 
 **Esquema de Solicitação:**
@@ -295,7 +296,7 @@ então o load balancer deve rotear `/.well-known/*` para o NEG do backend.
 
 **Comportamento no servidor:**
 *   **Grant `authorization_code`:** busca o `code` em `oauth_codes`, **exclui imediatamente** (anti-replay), e então valida expiração, `client_id`, `redirect_uri` (normalizado loopback) e a transformação PKCE: `BASE64URL(SHA256(ASCII(code_verifier)))` deve ser igual ao `code_challenge` salvo (comparação em tempo constante). No sucesso, gera um custom token Firebase (`firebase-admin`) e o troca por um ID + refresh token reais via a API REST do Identity Toolkit.
-*   **Grant `refresh_token`:** troca um refresh token por um ID token novo via a API REST do Secure Token.
+*   **Grant `refresh_token`:** troca um refresh token por um ID token novo via a API REST do Secure Token e reconsulta a allow-list antes de devolvê-lo. Um usuário desativado, removido ou sem role recebe `400 invalid_grant` e tem os refresh tokens revogados, encerrando a cadeia. Uma role alterada no console é ressincronizada na custom claim `tier` e o token é reemitido, de modo que o chamador sai com a role vigente. Se a allow-list não puder ser lida (Firestore ou Firebase indisponível), a renovação é negada com `502` e **nada é revogado** — indisponibilidade não é revogação.
 *   Códigos inválidos/usados, expirados, divergências ou PKCE inválido retornam `400 invalid_grant`; `grant_type` desconhecido retorna `400 unsupported_grant_type`.
 *   Requer a env var `FIREBASE_WEB_API_KEY` (mesmo valor do `NEXT_PUBLIC_FIREBASE_API_KEY` do portal).
 

@@ -2,6 +2,242 @@
 
 <!-- version list -->
 
+## v0.13.1 (2026-10-12)
+
+### Bug Fixes
+
+- **iam**: Correct runtime SA roles and harden deploy
+  ([#70](https://github.com/ambiental-media/jor-mcp/pull/70),
+  [`1332afe`](https://github.com/ambiental-media/jor-mcp/commit/1332afeee36adaae076238d8278aa28873e059fa))
+
+### Chores
+
+- Allocate 1Gi of memory to the cloud run service
+  ([#77](https://github.com/ambiental-media/jor-mcp/pull/77),
+  [`9b6019c`](https://github.com/ambiental-media/jor-mcp/commit/9b6019cdafdcef975d2fa8f19e67f07078c38c69))
+
+- Dedicated least-privilege service account for Cloud Run
+  ([#70](https://github.com/ambiental-media/jor-mcp/pull/70),
+  [`1332afe`](https://github.com/ambiental-media/jor-mcp/commit/1332afeee36adaae076238d8278aa28873e059fa))
+
+- Use dedicated least-privilege service account for cloud run
+  ([#70](https://github.com/ambiental-media/jor-mcp/pull/70),
+  [`1332afe`](https://github.com/ambiental-media/jor-mcp/commit/1332afeee36adaae076238d8278aa28873e059fa))
+
+### Documentation
+
+- Document dedicated runtime service account setup
+  ([#70](https://github.com/ambiental-media/jor-mcp/pull/70),
+  [`1332afe`](https://github.com/ambiental-media/jor-mcp/commit/1332afeee36adaae076238d8278aa28873e059fa))
+
+
+## v0.13.0 (2026-10-02)
+
+### Bug Fixes
+
+- Bump anyio to patch known CVEs ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Bump cryptography and h2 to patch known CVEs
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Bump pyjwt to patch known CVEs ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Bump soupsieve to patch known CVEs ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Drop system pip from the runtime image to clear vendored CVEs
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Emit one Cloud Logging entry per log record
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Isolate WordPress failures inside the search_content
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Role based rate limiting ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Small improvements ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- **config**: Remove duplicate IP rate limit definitions
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- **config**: Remove duplicates ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- **deps**: Bump anyio and soupsieve to patch known CVEs
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- **deps**: Bump deps versions ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- **deps**: Bump deps versions and remove unnecessary deps
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- **deps**: Restore valid uv.lock from main
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+### Chores
+
+- Deps version bump ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Remove accidental config.py.orig merge artifact
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+### Features
+
+- Bump mcp, pyasn1 and fastmcp to patch known CVEs
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Implement ip based rate limiting ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+- Revalidate allow-list and role on token renewal
+  ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+### Testing
+
+- Reach full statement coverage ([#76](https://github.com/ambiental-media/jor-mcp/pull/76),
+  [`6e47e74`](https://github.com/ambiental-media/jor-mcp/commit/6e47e74288675a4f5b8889f24b34131f2b92ba25))
+
+
+## v0.12.0 (2026-10-02)
+
+### Bug Fixes
+
+- Bump cryptography and h2 to patch known CVEs
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Bump pyjwt to patch known CVEs ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Bump soupsieve to patch known CVEs ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Drop system pip from the runtime image to clear vendored CVEs
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Isolate WordPress failures inside the search_content
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Role based rate limiting ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Small improvements ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- **config**: Remove duplicate IP rate limit definitions
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- **config**: Remove duplicates ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- **deps**: Bump anyio and soupsieve to patch known CVEs
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- **deps**: Bump deps versions ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- **deps**: Bump deps versions and remove unnecessary deps
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+### Chores
+
+- Deps version bump ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Remove accidental config.py.orig merge artifact
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+### Features
+
+- Bump mcp, pyasn1 and fastmcp to patch known CVEs
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Implement ip based rate limiting ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+- Revalidate allow-list and role on token renewal
+  ([#73](https://github.com/ambiental-media/jor-mcp/pull/73),
+  [`2a0e514`](https://github.com/ambiental-media/jor-mcp/commit/2a0e514c7f4193abe589052c4d4c6e6944c0ea6a))
+
+
+## v0.11.0 (2026-10-02)
+
+### Bug Fixes
+
+- Bump cryptography and h2 to patch known CVEs
+  ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- Bump pyjwt to patch known CVEs ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- Drop system pip from the runtime image to clear vendored CVEs
+  ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- Isolate WordPress failures inside the search_content
+  ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- Role based rate limiting ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- Small improvements ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- **config**: Remove duplicate IP rate limit definitions
+  ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- **config**: Remove duplicates ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- **deps**: Bump anyio and soupsieve to patch known CVEs
+  ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- **deps**: Bump deps versions ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- **deps**: Bump deps versions and remove unnecessary deps
+  ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+### Features
+
+- Bump mcp, pyasn1 and fastmcp to patch known CVEs
+  ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+- Implement ip based rate limiting ([#72](https://github.com/ambiental-media/jor-mcp/pull/72),
+  [`5daec57`](https://github.com/ambiental-media/jor-mcp/commit/5daec572c49f40369583105b925d7bc747b835e1))
+
+
 ## v0.10.0 (2026-09-30)
 
 ### Bug Fixes
