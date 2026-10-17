@@ -45,9 +45,10 @@ Ask Ambiental Media to add your Google account to their allow-list, then follow 
       --impersonate-service-account=jor-mcp-local@<project-id>.iam.gserviceaccount.com
     ```
 
-4.  Start the server bound to localhost only:
+4.  Name that account for the Firebase Admin SDK, then start the server bound to localhost only. The SDK cannot sign the login flow's custom tokens with impersonated credentials directly; with `FIREBASE_SERVICE_ACCOUNT_ID` it signs through IAM instead:
 
     ```bash
+    echo "FIREBASE_SERVICE_ACCOUNT_ID=jor-mcp-local@<project-id>.iam.gserviceaccount.com" >> .env
     uv run --env-file .env uvicorn src.server:app --host 127.0.0.1 --port 8080
     ```
 
@@ -59,7 +60,7 @@ Ask Ambiental Media to add your Google account to their allow-list, then follow 
     ```
 
 > [!NOTE]
-> The impersonation setup in steps 2 and 3 has not yet been validated end to end against the token exchange (`create_custom_token`). Report any `403` from the token endpoint as an issue.
+> This setup was validated end to end with a scripted MCP client: client registration, consent through the reference portal, code exchange (a reused code is refused) and the three tools at `/mcp`. Without `FIREBASE_SERVICE_ACCOUNT_ID`, the code exchange fails.
 
 ---
 
@@ -71,6 +72,7 @@ Several defaults point to Ambiental Media. If you leave them unset, your instanc
 |---|---|---|
 | `GOOGLE_CLOUD_PROJECT` | Set by Cloud Run | **Required** |
 | `FIREBASE_WEB_API_KEY` | **Required** | **Required** |
+| `FIREBASE_SERVICE_ACCOUNT_ID` | Leave unset | **Required** with impersonation |
 | `WORDPRESS_API_URL` | **Required** (default is Ambiental Media) | **Required** (default is Ambiental Media) |
 | `MCP_GITHUB_REPOS` / `MCP_GITHUB_TOKEN` | Optional | Optional |
 | `MCP_GITHUB_FILENAMES` | Optional (default `pt.json,en.json`) | Optional (default `pt.json,en.json`) |
@@ -92,7 +94,7 @@ Several defaults point to Ambiental Media. If you leave them unset, your instanc
 | Custom agents (MCP SDK) | A, B and C | Must implement OAuth 2.1 with PKCE and Dynamic Client Registration (DCR) |
 
 > [!NOTE]
-> The server mounts the MCP endpoint at `/mcp`. Older material refers to `/mcp/sse`. Both answer `401` without a token, so confirm the path with a signed-in client on your instance.
+> The server mounts the MCP endpoint at `/mcp`. Older material refers to `/mcp/sse`, which answers `404` even with a valid token on this code base.
 
 ---
 

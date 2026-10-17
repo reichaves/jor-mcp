@@ -56,6 +56,7 @@ otherwise let anyone flood Firestore through `POST /api/oauth/register`.
 -   `OAUTH_CODE_TTL_SECONDS` (Default: `"600"`): Lifetime of issued authorization codes.
 -   `ALLOWED_USERS_COLLECTION` (Default: `"allowed_users"`): Firestore whitelist collection of user emails.
 -   `FIREBASE_WEB_API_KEY` (Required in production): The Web API Key found in your Firebase project settings, used for secure token exchange.
+-   `FIREBASE_SERVICE_ACCOUNT_ID` (Default: empty): Service account the Firebase Admin SDK signs custom tokens as, through IAM `signBlob`. Leave it empty on Cloud Run. Set it when running locally with impersonated Application Default Credentials, which the SDK cannot sign with directly; the account needs `roles/iam.serviceAccountTokenCreator` on itself.
 
 ### 2.3 External Content Source Configurations
 -   `WORDPRESS_API_URL` (Default: `"https://ambiental.media/wp-json"`; **required outside Ambiental Media**): Base URL of the target WordPress CMS API.

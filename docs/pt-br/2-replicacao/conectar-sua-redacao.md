@@ -45,9 +45,10 @@ Peça à Ambiental Media para incluir a sua conta Google na allow-list e siga [C
       --impersonate-service-account=jor-mcp-local@<project-id>.iam.gserviceaccount.com
     ```
 
-4.  Suba o servidor aceitando conexões só da própria máquina:
+4.  Informe essa conta ao Firebase Admin SDK e suba o servidor aceitando conexões só da própria máquina. O SDK não consegue assinar os custom tokens do login com credenciais impersonadas; com `FIREBASE_SERVICE_ACCOUNT_ID`, ele assina pelo IAM:
 
     ```bash
+    echo "FIREBASE_SERVICE_ACCOUNT_ID=jor-mcp-local@<project-id>.iam.gserviceaccount.com" >> .env
     uv run --env-file .env uvicorn src.server:app --host 127.0.0.1 --port 8080
     ```
 
@@ -59,7 +60,7 @@ Peça à Ambiental Media para incluir a sua conta Google na allow-list e siga [C
     ```
 
 > [!NOTE]
-> A configuração por impersonação dos passos 2 e 3 ainda não foi validada de ponta a ponta na troca de token (`create_custom_token`). Se o endpoint de token responder `403`, registre uma issue.
+> Esta configuração foi validada de ponta a ponta com um cliente MCP em script: registro do cliente, consentimento pelo portal de referência, troca do código (um código reutilizado é recusado) e as três ferramentas em `/mcp`. Sem `FIREBASE_SERVICE_ACCOUNT_ID`, a troca do código falha.
 
 ---
 
@@ -71,6 +72,7 @@ Vários valores padrão apontam para a Ambiental Media. Se você não os definir
 |---|---|---|
 | `GOOGLE_CLOUD_PROJECT` | Definida pelo Cloud Run | **Obrigatória** |
 | `FIREBASE_WEB_API_KEY` | **Obrigatória** | **Obrigatória** |
+| `FIREBASE_SERVICE_ACCOUNT_ID` | Não definir | **Obrigatória** com impersonação |
 | `WORDPRESS_API_URL` | **Obrigatória** (o padrão é a Ambiental Media) | **Obrigatória** (o padrão é a Ambiental Media) |
 | `MCP_GITHUB_REPOS` / `MCP_GITHUB_TOKEN` | Opcional | Opcional |
 | `MCP_GITHUB_FILENAMES` | Opcional (padrão `pt.json,en.json`) | Opcional (padrão `pt.json,en.json`) |
@@ -92,7 +94,7 @@ Vários valores padrão apontam para a Ambiental Media. Se você não os definir
 | Agentes próprios (MCP SDK) | A, B e C | Precisam implementar OAuth 2.1 com PKCE e Dynamic Client Registration (DCR) |
 
 > [!NOTE]
-> O servidor monta o endpoint MCP em `/mcp`. Materiais mais antigos citam `/mcp/sse`. Os dois respondem `401` sem token, então confirme o caminho com um cliente já autenticado na sua instância.
+> O servidor monta o endpoint MCP em `/mcp`. Materiais mais antigos citam `/mcp/sse`, que responde `404` mesmo com token válido neste código.
 
 ---
 
