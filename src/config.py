@@ -196,25 +196,56 @@ Environment variable: ``MCP_GITHUB_API_BASE_URL``.
 """
 
 
-def parse_github_filenames(raw: str) -> frozenset[str]:
-    """Parse a comma-separated list of file names, keeping only ``.json`` entries.
+GITHUB_FILE_EXTENSIONS: tuple[str, ...] = (".json", ".csv", ".md", ".markdown")
+"""File extensions the GitHub source can parse (see ``src.services.github``)."""
 
-    The GitHub source decodes every matched file as JSON and searches its string
-    values, so any other extension could never return results and is dropped.
+
+def parse_github_filenames(raw: str) -> frozenset[str]:
+    """Parse comma-separated file-name patterns, keeping only supported extensions.
+
+    Each entry is an exact name (``pt.json``) or an ``fnmatch`` pattern matched
+    against the file name (``*.csv``, ``dados-*.json``). Entries whose extension
+    the GitHub source cannot parse could never return results and are dropped.
     """
     names = (name.strip() for name in raw.split(","))
-    return frozenset(name for name in names if name.endswith(".json"))
+    return frozenset(name for name in names if name.lower().endswith(GITHUB_FILE_EXTENSIONS))
 
 
 GITHUB_FILENAMES: frozenset[str] = parse_github_filenames(
     os.environ.get("MCP_GITHUB_FILENAMES", "pt.json,en.json")
 )
-"""File names searched in each GitHub repository, matched at any depth.
+"""File-name patterns searched in each GitHub repository, matched at any depth.
 
-Comma-separated; only ``.json`` names are kept. Defaults to the ``pt.json`` and
-``en.json`` message files used by Ambiental Media's microsites.
+Comma-separated exact names or ``fnmatch`` patterns ending in ``.json``,
+``.csv``, ``.md`` or ``.markdown``. Defaults to the ``pt.json`` and ``en.json``
+message files used by Ambiental Media's microsites.
 
 Environment variable: ``MCP_GITHUB_FILENAMES``.
+"""
+
+GITHUB_MAX_FILE_BYTES: int = int(os.environ.get("MCP_GITHUB_MAX_FILE_BYTES", "1000000"))
+"""Largest file, in bytes, fetched from GitHub; larger matches are skipped.
+
+The default matches the Contents API, which only returns Base64 content for files
+up to 1 MB.
+
+Environment variable: ``MCP_GITHUB_MAX_FILE_BYTES``.
+"""
+
+GITHUB_MAX_FILES_PER_REPO: int = int(os.environ.get("MCP_GITHUB_MAX_FILES_PER_REPO", "50"))
+"""Most matching files fetched per repository; the rest are skipped with a warning.
+
+Environment variable: ``MCP_GITHUB_MAX_FILES_PER_REPO``.
+"""
+
+GITHUB_CACHE_SECONDS: int = int(os.environ.get("MCP_GITHUB_CACHE_SECONDS", "300"))
+"""How long fetched GitHub content is reused before it is downloaded again.
+
+Each search otherwise downloads every matching file of every repository. ``0``
+disables the cache. The cache lives in memory, so each Cloud Run instance keeps
+its own.
+
+Environment variable: ``MCP_GITHUB_CACHE_SECONDS``.
 """
 
 # ---------------------------------------------------------------------------

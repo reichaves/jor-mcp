@@ -1,28 +1,42 @@
 """GitHub Content API service layer.
 
-Fetches i18n JSON files (``pt.json`` / ``en.json``) from multiple GitHub
-repositories owned by Ambiental Media and consolidates their content for
-use in the unified search tool.
+Fetches JSON, CSV and Markdown files from the GitHub repositories listed in
+``MCP_GITHUB_REPOS`` and consolidates their content for use in the unified
+search tool.
 
 File discovery is performed via the GitHub Git Trees API, which returns the
-full recursive tree of the default branch.  Any file named ``pt.json`` or
-``en.json`` is fetched, regardless of its depth or directory.  The Contents
-API returns file data encoded in Base64; this module handles decoding
-defensively and validates the decoded structure through Pydantic before
-returning it to the caller.
+full recursive tree of the default branch.  Any file whose name matches one of
+the ``MCP_GITHUB_FILENAMES`` patterns (by default ``pt.json`` and ``en.json``)
+is fetched, regardless of its depth or directory, within the size and count
+limits.  The Contents API returns file data encoded in Base64; this module
+decodes it defensively and parses it by extension into a structure the search
+tool can walk.  Results are cached in memory for ``MCP_GITHUB_CACHE_SECONDS``.
 """
 
 import asyncio
 import base64
+import csv
+import io
 import json
 import logging
+from fnmatch import fnmatchcase
 from pathlib import Path
+from time import monotonic
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from src.config import GITHUB_API_BASE_URL, GITHUB_FILENAMES, GITHUB_REPOS, GITHUB_TOKEN
+from src.config import (
+    GITHUB_API_BASE_URL,
+    GITHUB_CACHE_SECONDS,
+    GITHUB_FILENAMES,
+    GITHUB_MAX_FILE_BYTES,
+    GITHUB_MAX_FILES_PER_REPO,
+    GITHUB_REPOS,
+    GITHUB_TOKEN,
+)
 from src.http_client import get_http_client
 
 logger = logging.getLogger(__name__)
@@ -46,6 +60,7 @@ class _GitHubTreeItem(BaseModel):
 
     path: str
     type: str  # "blob" (file) or "tree" (directory)
+    size: int | None = None  # bytes; only present for blobs
 
 
 class _GitHubTreeResponse(BaseModel):
@@ -56,11 +71,23 @@ class _GitHubTreeResponse(BaseModel):
 
 
 class GitHubFileResult(BaseModel):
-    """A successfully decoded i18n file from a GitHub repository."""
+    """A successfully parsed file from a GitHub repository."""
 
     repo: str
     path: str
-    data: dict[str, Any]
+    data: dict[str, Any] | list[Any]
+
+
+# In-memory cache of the consolidated content: (monotonic time stored, content).
+_cache: tuple[float, list[dict[str, Any]]] | None = None
+_cache_lock = asyncio.Lock()
+
+
+def clear_cache() -> None:
+    """Drop the cached GitHub content, so the next search downloads it again."""
+    global _cache, _cache_lock
+    _cache = None
+    _cache_lock = asyncio.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +126,44 @@ def _decode_base64_content(raw: str) -> bytes:
     return base64.b64decode(raw.replace("\n", "").strip())
 
 
+def _parse_content(path: str, text: str) -> dict[str, Any] | list[Any]:
+    """Turn a file's text into a structure the search tool can walk.
+
+    JSON keeps its own structure (object or array), CSV becomes a list of rows
+    keyed by the header, and Markdown becomes ``{"text": ...}``.
+
+    Args:
+        path: The file path, whose extension selects the parser.
+        text: The decoded file content.
+
+    Returns:
+        The parsed content.
+
+    Raises:
+        ValueError: If the content cannot be parsed for its extension.
+    """
+    suffix = Path(path).suffix.lower()
+    if suffix == ".json":
+        data = json.loads(text)
+        if not isinstance(data, dict | list):
+            raise ValueError("JSON root must be an object or an array")
+        return data
+    if suffix == ".csv":
+        reader = csv.DictReader(io.StringIO(text))
+        if not reader.fieldnames:
+            raise ValueError("CSV file has no header row")
+        return [dict(row) for row in reader]
+    if suffix in (".md", ".markdown"):
+        return {"text": text}
+    raise ValueError(f"Unsupported file type: {suffix or path}")
+
+
+def _matches_patterns(path: str) -> bool:
+    """Return True when the file name matches one of the configured patterns."""
+    name = Path(path).name
+    return any(fnmatchcase(name, pattern) for pattern in GITHUB_FILENAMES)
+
+
 async def _fetch_file(
     client: httpx.AsyncClient,
     repo: str,
@@ -115,7 +180,7 @@ async def _fetch_file(
         A ``GitHubFileResult`` when the file exists and decodes successfully,
         or ``None`` if the file does not exist (HTTP 404) or cannot be parsed.
     """
-    url = f"{GITHUB_API_BASE_URL}/repos/{repo}/contents/{path}"
+    url = f"{GITHUB_API_BASE_URL}/repos/{repo}/contents/{quote(path)}"
     try:
         response = await client.get(url, headers=_build_auth_headers())
     except httpx.RequestError as exc:
@@ -161,33 +226,28 @@ async def _fetch_file(
     try:
         raw_bytes = _decode_base64_content(payload.content)
         decoded_str = raw_bytes.decode("utf-8", errors="ignore")
-        data: dict[str, Any] = json.loads(decoded_str)
-    except (ValueError, json.JSONDecodeError) as exc:
+        data = _parse_content(path, decoded_str)
+    except (ValueError, csv.Error) as exc:
+        # json.JSONDecodeError is a ValueError subclass.
         logger.warning(
             "Failed to decode GitHub file content",
             extra={"repo": repo, "path": path, "error": str(exc)},
         )
         return None
 
-    try:
-        return GitHubFileResult(repo=repo, path=path, data=data)
-    except ValidationError as exc:
-        logger.warning(
-            "Decoded GitHub file content does not match expected schema (expected dict)",
-            extra={"repo": repo, "path": path, "error": str(exc)},
-        )
-        return None
+    return GitHubFileResult(repo=repo, path=path, data=data)
 
 
 async def _discover_i18n_paths(
     client: httpx.AsyncClient,
     repo: str,
 ) -> list[str]:
-    """Discover i18n JSON file paths inside a repository via the Git Trees API.
+    """Discover matching file paths inside a repository via the Git Trees API.
 
-    Fetches the full recursive tree of the default branch and returns the
-    path of every file whose name is ``pt.json`` or ``en.json``, regardless
-    of directory depth.
+    Fetches the full recursive tree of the default branch and returns the path
+    of every file whose name matches an ``MCP_GITHUB_FILENAMES`` pattern,
+    regardless of directory depth.  Files larger than ``MCP_GITHUB_MAX_FILE_BYTES``
+    are skipped and at most ``MCP_GITHUB_MAX_FILES_PER_REPO`` paths are kept.
 
     Args:
         client: The shared async HTTP client.
@@ -240,22 +300,35 @@ async def _discover_i18n_paths(
             extra={"repo": repo},
         )
 
-    return [
-        item.path
-        for item in payload.tree
-        if item.type == "blob" and Path(item.path).name in GITHUB_FILENAMES
-    ]
+    paths: list[str] = []
+    for item in payload.tree:
+        if item.type != "blob" or not _matches_patterns(item.path):
+            continue
+        if item.size is not None and item.size > GITHUB_MAX_FILE_BYTES:
+            logger.warning(
+                "Skipping GitHub file larger than MCP_GITHUB_MAX_FILE_BYTES",
+                extra={"repo": repo, "path": item.path, "size": item.size},
+            )
+            continue
+        paths.append(item.path)
+
+    if len(paths) > GITHUB_MAX_FILES_PER_REPO:
+        logger.warning(
+            "Too many matching GitHub files; keeping the first MCP_GITHUB_MAX_FILES_PER_REPO",
+            extra={"repo": repo, "matched": len(paths), "kept": GITHUB_MAX_FILES_PER_REPO},
+        )
+        paths = paths[:GITHUB_MAX_FILES_PER_REPO]
+    return paths
 
 
 async def _fetch_repo_files(
     client: httpx.AsyncClient,
     repo: str,
 ) -> list[GitHubFileResult]:
-    """Fetch all i18n JSON files found in a single repository.
+    """Fetch all matching files found in a single repository.
 
-    Discovers candidate paths via the Git Trees API (any file named
-    ``pt.json`` or ``en.json`` at any depth), then fetches and decodes each
-    one via the Contents API.
+    Discovers candidate paths via the Git Trees API, then fetches and parses
+    each one via the Contents API.
 
     Args:
         client: The shared async HTTP client.
@@ -283,11 +356,13 @@ async def _fetch_repo_files(
 
 
 async def fetch_github_i18n_content() -> list[dict[str, Any]]:
-    """Fetch and consolidate i18n JSON content from all configured repositories.
+    """Fetch and consolidate content from all configured repositories.
 
     Reads ``GITHUB_REPOS`` (a comma-separated list of ``owner/repo`` strings),
-    then for each repository attempts to retrieve all known i18n JSON file
-    candidates via the GitHub Contents API.
+    then for each repository retrieves every file matching the configured
+    patterns via the GitHub Contents API.  A non-empty result is reused for
+    ``MCP_GITHUB_CACHE_SECONDS``; an empty one is not cached, so a transient
+    failure does not hide the content until the cache expires.
 
     Failures for individual repositories are logged at WARNING level and do
     **not** raise exceptions, allowing the remaining repositories to return
@@ -295,18 +370,39 @@ async def fetch_github_i18n_content() -> list[dict[str, Any]]:
 
     Returns:
         A flat list of dicts, each representing one successfully fetched file.
-        Keys: ``repo`` (str), ``path`` (str), ``data`` (dict).
+        Keys: ``repo`` (str), ``path`` (str), ``data`` (dict or list).
         On complete failure (e.g. empty ``GITHUB_REPOS``), returns an empty
         list.
     """
+    global _cache
     if not GITHUB_REPOS.strip():
         logger.warning("GITHUB_REPOS is not configured; skipping GitHub ingestion")
         return []
     if not GITHUB_FILENAMES:
-        logger.warning("MCP_GITHUB_FILENAMES has no .json file names; skipping GitHub ingestion")
+        logger.warning(
+            "MCP_GITHUB_FILENAMES has no supported file patterns; skipping GitHub ingestion"
+        )
         return []
 
     repos = [r.strip() for r in GITHUB_REPOS.split(",") if r.strip()]
+    if GITHUB_CACHE_SECONDS <= 0:
+        return await _fetch_all_repos(repos)
+
+    # The lock makes concurrent searches wait for one download instead of each
+    # fetching every repository.
+    async with _cache_lock:
+        now = monotonic()
+        if _cache is not None and now - _cache[0] < GITHUB_CACHE_SECONDS:
+            logger.info("Served GitHub content from cache", extra={"files": len(_cache[1])})
+            return _cache[1]
+        content = await _fetch_all_repos(repos)
+        logger.info("Fetched GitHub content", extra={"repos": len(repos), "files": len(content)})
+        _cache = (now, content) if content else None
+        return content
+
+
+async def _fetch_all_repos(repos: list[str]) -> list[dict[str, Any]]:
+    """Fetch every repository concurrently and flatten their files."""
     client = get_http_client()
     consolidated: list[dict[str, Any]] = []
 

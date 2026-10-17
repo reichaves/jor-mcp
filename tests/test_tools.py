@@ -344,6 +344,30 @@ class TestSearchGithub:
 
         assert results == []
 
+    async def test_matches_csv_cells_and_markdown_text(
+        self, mock_fetch_github_i18n_content: AsyncMock
+    ) -> None:
+        """Phase 4.5: CSV rows and Markdown text are searched like JSON."""
+        mock_fetch_github_i18n_content.return_value = [
+            {
+                "repo": "redacao/dados",
+                "path": "desmatamento/municipios.csv",
+                "data": [{"municipio": "Altamira", "area_km2": "159533"}],
+            },
+            {
+                "repo": "redacao/pautas",
+                "path": "notas/altamira.md",
+                "data": {"text": "# Pauta\nVisita a Altamira em março."},
+            },
+        ]
+
+        results = await _search_github("altamira")
+
+        assert [r["source"] for r in results] == ["github:redacao/dados", "github:redacao/pautas"]
+        assert results[0]["excerpt"] == "Altamira"
+        assert "Altamira" in results[1]["excerpt"]
+        assert results[1]["link"] == "https://github.com/redacao/pautas/blob/HEAD/notas/altamira.md"
+
     async def test_empty_files_returns_empty(
         self, mock_fetch_github_i18n_content: AsyncMock
     ) -> None:

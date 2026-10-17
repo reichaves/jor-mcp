@@ -17,6 +17,8 @@ from src.services.github import (
     _discover_i18n_paths,
     _fetch_file,
     _fetch_repo_files,
+    _parse_content,
+    clear_cache,
     fetch_github_i18n_content,
 )
 
@@ -73,6 +75,14 @@ def _tree_response(
         "tree": [{"path": p, "type": "blob"} for p in paths],
         "truncated": truncated,
     }
+
+
+@pytest.fixture(autouse=True)
+def _fresh_cache() -> Generator[None, None, None]:
+    """Start and end every test with an empty GitHub content cache."""
+    clear_cache()
+    yield
+    clear_cache()
 
 
 @pytest.fixture
@@ -190,17 +200,31 @@ async def test_fetch_file_invalid_json_returns_none(mock_client: AsyncMock) -> N
 
 
 @pytest.mark.asyncio
-async def test_fetch_file_json_array_content_returns_none(mock_client: AsyncMock) -> None:
-    """A Base64-encoded JSON array must be gracefully rejected (not raise ValidationError)."""
+async def test_fetch_file_json_array_content_is_accepted(mock_client: AsyncMock) -> None:
+    """A JSON array at the root is searchable data, like a CSV exported to JSON."""
     array_payload = {
         "name": "pt.json",
         "path": _PATH,
         "encoding": "base64",
-        "content": base64.b64encode(json.dumps([1, 2, 3]).encode("utf-8")).decode("ascii"),
+        "content": base64.b64encode(json.dumps([{"a": "x"}]).encode("utf-8")).decode("ascii"),
     }
     mock_client.get.return_value = _make_response(200, array_payload)
     result = await _fetch_file(mock_client, _REPO, _PATH)
-    assert result is None
+    assert result is not None
+    assert result.data == [{"a": "x"}]
+
+
+@pytest.mark.asyncio
+async def test_fetch_file_json_scalar_content_returns_none(mock_client: AsyncMock) -> None:
+    """A JSON scalar at the root has nothing to search and is rejected."""
+    payload = {
+        "name": "pt.json",
+        "path": _PATH,
+        "encoding": "base64",
+        "content": base64.b64encode(b"42").decode("ascii"),
+    }
+    mock_client.get.return_value = _make_response(200, payload)
+    assert await _fetch_file(mock_client, _REPO, _PATH) is None
 
 
 @pytest.mark.asyncio
@@ -444,10 +468,150 @@ async def test_fetch_github_i18n_content_survives_unexpected_task_error(
     [
         ("pt.json,en.json", {"pt.json", "en.json"}),
         (" data.json , pt.json ,", {"data.json", "pt.json"}),
-        ("data.csv,notes.md,data.json", {"data.json"}),
+        ("data.csv,notes.md,data.json", {"data.csv", "notes.md", "data.json"}),
+        (
+            "*.csv,*.MD,guia.markdown,dados-*.json",
+            {"*.csv", "*.MD", "guia.markdown", "dados-*.json"},
+        ),
+        ("*,data.xlsx,notes.txt,*.json", {"*.json"}),
         ("", set()),
     ],
 )
 def test_parse_github_filenames(raw: str, expected: set[str]) -> None:
-    """Names are trimmed, blanks dropped and only .json names kept."""
+    """Names are trimmed, blanks dropped and only parseable extensions kept."""
     assert parse_github_filenames(raw) == frozenset(expected)
+
+
+# ---------------------------------------------------------------------------
+# Phase 4.5: file formats, patterns, limits and cache
+# ---------------------------------------------------------------------------
+
+
+def _raw_content_response(path: str, text: str) -> dict[str, object]:
+    """Contents API payload for an arbitrary text file."""
+    return {
+        "name": path.split("/")[-1],
+        "path": path,
+        "encoding": "base64",
+        "content": base64.b64encode(text.encode("utf-8")).decode("ascii"),
+    }
+
+
+def test_parse_content_csv_rows_keyed_by_header() -> None:
+    rows = _parse_content("dados/municipios.csv", "municipio,area\nAltamira,159533\nBelém,1059\n")
+    assert rows == [
+        {"municipio": "Altamira", "area": "159533"},
+        {"municipio": "Belém", "area": "1059"},
+    ]
+
+
+def test_parse_content_markdown_and_markdown_extension() -> None:
+    assert _parse_content("README.md", "# Título\nTexto") == {"text": "# Título\nTexto"}
+    assert _parse_content("docs/guia.MARKDOWN", "x") == {"text": "x"}
+
+
+@pytest.mark.parametrize(
+    ("path", "text"),
+    [
+        ("vazio.csv", ""),  # no header row
+        ("dados.json", '"just a string"'),  # JSON scalar
+        ("dados.json", "{not json"),
+        ("planilha.xlsx", "binary"),  # unsupported extension
+    ],
+)
+def test_parse_content_rejects_unparseable(path: str, text: str) -> None:
+    with pytest.raises(ValueError):
+        _parse_content(path, text)
+
+
+@pytest.mark.asyncio
+async def test_fetch_file_parses_csv_and_quotes_path(mock_client: AsyncMock) -> None:
+    """CSV files become rows, and paths with spaces are URL-encoded."""
+    path = "dados/minha planilha.csv"
+    mock_client.get.return_value = _make_response(200, _raw_content_response(path, "a,b\n1,2\n"))
+    result = await _fetch_file(mock_client, _REPO, path)
+    assert result is not None
+    assert result.data == [{"a": "1", "b": "2"}]
+    called_url = mock_client.get.call_args.args[0]
+    assert called_url.endswith("/contents/dados/minha%20planilha.csv")
+
+
+@pytest.mark.asyncio
+async def test_discover_matches_patterns_case_sensitively(mock_client: AsyncMock) -> None:
+    mock_client.get.return_value = _make_response(
+        200,
+        _tree_response(["a/dados.csv", "b/c/notas.md", "README.MD", "pt.json", "x.txt"]),
+    )
+    with patch("src.services.github.GITHUB_FILENAMES", frozenset({"*.csv", "*.md"})):
+        paths = await _discover_i18n_paths(mock_client, _REPO)
+    assert paths == ["a/dados.csv", "b/c/notas.md"]
+
+
+@pytest.mark.asyncio
+async def test_discover_skips_large_files_and_caps_count(
+    mock_client: AsyncMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    tree = {
+        "tree": [
+            {"path": "grande.csv", "type": "blob", "size": 5_000_000},
+            *({"path": f"f{i}.csv", "type": "blob", "size": 10} for i in range(4)),
+        ],
+        "truncated": False,
+    }
+    mock_client.get.return_value = _make_response(200, tree)
+    with (
+        patch("src.services.github.GITHUB_FILENAMES", frozenset({"*.csv"})),
+        patch("src.services.github.GITHUB_MAX_FILES_PER_REPO", 3),
+        caplog.at_level(logging.WARNING, logger="src.services.github"),
+    ):
+        paths = await _discover_i18n_paths(mock_client, _REPO)
+    assert paths == ["f0.csv", "f1.csv", "f2.csv"]
+    messages = [r.message for r in caplog.records]
+    assert any("larger than MCP_GITHUB_MAX_FILE_BYTES" in m for m in messages)
+    assert any("Too many matching GitHub files" in m for m in messages)
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_is_cached_until_it_expires(mock_client: AsyncMock) -> None:
+    """A second search reuses the content; after the TTL it is downloaded again."""
+    discover = AsyncMock(return_value=[_PATH])
+    mock_client.get.return_value = _make_response(200, _content_response(_PATH))
+    with (
+        patch("src.services.github.GITHUB_REPOS", _REPO),
+        patch("src.services.github.GITHUB_CACHE_SECONDS", 300),
+        patch("src.services.github._discover_i18n_paths", new=discover),
+        patch("src.services.github.monotonic", side_effect=[1000.0, 1100.0, 1400.0]),
+    ):
+        first = await fetch_github_i18n_content()
+        second = await fetch_github_i18n_content()  # 100 s later: cache hit
+        third = await fetch_github_i18n_content()  # 400 s later: expired
+    assert first == second == third
+    assert discover.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_cache_disabled_with_zero(mock_client: AsyncMock) -> None:
+    discover = AsyncMock(return_value=[_PATH])
+    mock_client.get.return_value = _make_response(200, _content_response(_PATH))
+    with (
+        patch("src.services.github.GITHUB_REPOS", _REPO),
+        patch("src.services.github.GITHUB_CACHE_SECONDS", 0),
+        patch("src.services.github._discover_i18n_paths", new=discover),
+    ):
+        await fetch_github_i18n_content()
+        await fetch_github_i18n_content()
+    assert discover.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_does_not_cache_empty_results(mock_client: AsyncMock) -> None:
+    """A transient failure (no files) must not hide the content until the TTL expires."""
+    discover = AsyncMock(return_value=[])
+    with (
+        patch("src.services.github.GITHUB_REPOS", _REPO),
+        patch("src.services.github.GITHUB_CACHE_SECONDS", 300),
+        patch("src.services.github._discover_i18n_paths", new=discover),
+    ):
+        assert await fetch_github_i18n_content() == []
+        assert await fetch_github_i18n_content() == []
+    assert discover.await_count == 2
